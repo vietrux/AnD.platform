@@ -55,7 +55,7 @@
 | String encryption (AES-256) | ✅ | AES-GCM encryption |
 | Identifier randomization | ✅ | Rename functions/variables |
 | Junk code insertion | ✅ | Add dead code |
-| Control flow flattening | ⏳ | Deferred (low priority, not implemented yet) |
+| Control flow flattening | ⏳ | Advanced - lower priority |
 
 **Subtasks:**
 - [x] `encrypt_string_xor(plaintext: str, key: bytes) -> tuple[str, str]` (encrypted, decryption stub)
@@ -67,17 +67,17 @@
 ### 2.3 Compiler (`lib/compiler.py`)
 | Task | Status | Notes |
 |------|--------|-------|
-| Go compiler wrapper | ⏳ | `go build` with flags |
-| Cross-compilation support | ⏳ | `GOOS=windows GOARCH=amd64` |
-| Strip debug symbols | ⏳ | `-ldflags="-s -w"` |
-| Build artifact cleanup | ⏳ | Remove temp files |
-| Error handling | ⏳ | Parse compiler errors |
+| Go compiler wrapper | ✅ | `go build` with flags |
+| Cross-compilation support | ✅ | `GOOS=windows GOARCH=amd64` |
+| Strip debug symbols | ✅ | `-ldflags="-s -w"` |
+| Build artifact cleanup | ✅ | Remove temp files |
+| Error handling | ✅ | Parse compiler errors |
 
 **Subtasks:**
-- [ ] `compile_go(source_path: str, output_path: str, target_os: str, arch: str) -> bool`
-- [ ] `get_compiler_path() -> str` (from config)
-- [ ] `build_ldflags() -> str`
-- [ ] `cleanup_artifacts(build_dir: str) -> None`
+- [x] `compile_go(source_path: str, output_path: str, target_os: str, arch: str) -> bool`
+- [x] `get_compiler_path() -> str` (from config)
+- [x] `build_ldflags() -> str`
+- [x] `cleanup_artifacts(build_dir: str) -> None`
 
 ### 2.4 Evasion (`lib/evasion.py`)
 | Task | Status | Notes |
@@ -203,7 +203,7 @@
 |------|--------|-------|
 | `test_template_engine.py` | ✅ | Template loading/substitution |
 | `test_obfuscator.py` | ✅ | String encryption tests |
-| `test_compiler.py` | ⏳ | Compilation tests |
+| `test_compiler.py` | ✅ | Compilation tests |
 | `test_evasion.py` | ⏳ | Evasion injection tests |
 | `test_persistence.py` | ⏳ | Persistence injection tests |
 | `test_packer.py` | ⏳ | PE manipulation tests |
@@ -233,7 +233,7 @@
 
 ### Sprint 1: Core Engine
 1. ✅ `lib/template_engine.py` - Load and substitute templates
-2. ⏳ `lib/compiler.py` - Go compilation wrapper
+2. ✅ `lib/compiler.py` - Go compilation wrapper
 3. ⏳ `generator.py` - Basic CLI with `--c2` and `--output`
 4. ⏳ First working payload (basic template, no obfuscation)
 
@@ -275,12 +275,12 @@
 | Project Structure | ✅ | 100% |
 | Go Templates | ✅ | 100% (basic + syscalls) |
 | Configuration | ✅ | 100% |
-| Python Modules | 🔄 | 25% (template_engine + obfuscator complete) |
+| Python Modules | 🔄 | 40% (template_engine + obfuscator + compiler complete) |
 | Snippets | ⏳ | 0% |
-| Tests | 🔄 | 25% (template_engine + obfuscator tests) |
+| Tests | 🔄 | 40% (template_engine + obfuscator + compiler tests) |
 | CLI Integration | ⏳ | 0% |
 
-**Next Action:** Start Sprint 1 - Implement `lib/compiler.py`
+**Next Action:** Start Sprint 1 - Implement `generator.py` CLI
 
 ---
 

@@ -1,9 +1,37 @@
-pycryptodome==3.19.0
-jinja2==3.1.2
-pefile==2023.2.7
-lief==0.14.1
-click==8.1.7
-pyyaml==6.0.1
-colorama==0.4.6
-requests==2.31.0
-pytest==7.4.3
+# Attack & Defense CTF Gameserver Dependencies
+
+# Django Framework
+Django>=4.2,<5.0
+djangorestframework>=3.14.0
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Task Queue
+celery>=5.3.4
+redis>=5.0.1
+
+# Docker Integration
+docker>=7.0.0
+
+# Cryptography
+cryptography>=41.0.7
+
+# HTTP Requests
+requests>=2.31.0
+
+# WebSocket Support
+channels>=4.0.0
+channels-redis>=4.1.0
+daphne>=4.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+pytz>=2023.3
+
+# Development
+pytest>=7.4.3
+pytest-django>=4.7.0
+pytest-asyncio>=0.21.1
+black>=23.12.0
+flake8>=6.1.0

@@ -1,0 +1,49 @@
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.o
+*.a
+
+# Compiled binaries
+output/*
+!output/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Certificates
+*.pem
+*.pfx
+*.p12
+*.key
+*.crt
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test outputs
+test_payload*

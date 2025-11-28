@@ -1,0 +1,41 @@
+compiler_paths:
+  go: /usr/local/go/bin/go
+  mingw: /usr/bin/x86_64-w64-mingw32-gcc
+
+obfuscation:
+  string_encryption: aes256
+  identifier_length: 12
+  junk_code_ratio: 0.2
+
+evasion:
+  syscalls: indirect
+  amsi_bypass: true
+  etw_bypass: true
+  sandbox_checks: true
+
+persistence:
+  enabled: true
+  methods:
+    - registry
+    - schtasks
+    - wmi
+    - com_hijack
+
+forensics_evasion:
+  enabled: true
+  eventlog_clear: true
+  timestamp_stomp: true
+  prefetch_clear: true
+  usn_journal: false
+
+packer:
+  enabled: true
+  custom_packer: true
+  section_encryption: true
+  entropy_manipulation: true
+
+signing:
+  enabled: true
+  certificate_path: ""
+  password: ""
+  generate_selfsigned: true

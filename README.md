@@ -91,8 +91,10 @@ Edit `gameserver/config/game_config.py`:
 
 ## License
 
-[Add your license here]
+MIT License - see [LICENSE](LICENSE) file for details.
+
+This project is open source and free to use for educational purposes, CTF competitions, and security training.
 
 ## Contributors
 
-[Add contributors here]
+Created as an Attack & Defense CTF infrastructure for cybersecurity competitions and training.

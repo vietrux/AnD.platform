@@ -37,32 +37,32 @@
 ### 2.1 Template Engine (`lib/template_engine.py`)
 | Task | Status | Notes |
 |------|--------|-------|
-| Load template files | ⏳ | Read `.go` files from `templates/` |
-| Variable substitution | ⏳ | Replace `{{VAR}}` placeholders |
-| Template validation | ⏳ | Check required vars exist |
-| Random identifier generation | ⏳ | For `{{MAIN_FUNC}}`, `{{CONNECT_FUNC}}`, etc. |
+| Load template files | ✅ | Read `.go` files from `templates/` |
+| Variable substitution | ✅ | Replace `{{VAR}}` placeholders |
+| Template validation | ✅ | Check required vars exist |
+| Random identifier generation | ✅ | For `{{MAIN_FUNC}}`, `{{CONNECT_FUNC}}`, etc. |
 
 **Subtasks:**
-- [ ] `load_template(name: str) -> str`
-- [ ] `substitute_variables(template: str, vars: dict) -> str`
-- [ ] `generate_random_identifier(length: int) -> str`
-- [ ] `validate_template(template: str) -> list[str]` (missing vars)
+- [x] `load_template(name: str) -> str`
+- [x] `substitute_variables(template: str, vars: dict) -> str`
+- [x] `generate_random_identifier(length: int) -> str`
+- [x] `validate_template(template: str) -> list[str]` (missing vars)
 
 ### 2.2 Obfuscator (`lib/obfuscator.py`)
 | Task | Status | Notes |
 |------|--------|-------|
-| String encryption (XOR) | ⏳ | Basic XOR encryption |
-| String encryption (AES-256) | ⏳ | AES-GCM encryption |
-| Identifier randomization | ⏳ | Rename functions/variables |
-| Junk code insertion | ⏳ | Add dead code |
-| Control flow flattening | ⏳ | Advanced - lower priority |
+| String encryption (XOR) | ✅ | Basic XOR encryption |
+| String encryption (AES-256) | ✅ | AES-GCM encryption |
+| Identifier randomization | ✅ | Rename functions/variables |
+| Junk code insertion | ✅ | Add dead code |
+| Control flow flattening | ⏳ | Deferred (low priority, not implemented yet) |
 
 **Subtasks:**
-- [ ] `encrypt_string_xor(plaintext: str, key: bytes) -> tuple[str, str]` (encrypted, decryption stub)
-- [ ] `encrypt_string_aes(plaintext: str, key: bytes) -> tuple[str, str]`
-- [ ] `generate_decryption_stub_go(algorithm: str) -> str`
-- [ ] `randomize_identifiers(source: str) -> str`
-- [ ] `insert_junk_code(source: str, ratio: float) -> str`
+- [x] `encrypt_string_xor(plaintext: str, key: bytes) -> tuple[str, str]` (encrypted, decryption stub)
+- [x] `encrypt_string_aes(plaintext: str, key: bytes) -> tuple[str, str]`
+- [x] `generate_decryption_stub_go(algorithm: str) -> str`
+- [x] `randomize_identifiers(source: str) -> str`
+- [x] `insert_junk_code(source: str, ratio: float) -> str`
 
 ### 2.3 Compiler (`lib/compiler.py`)
 | Task | Status | Notes |
@@ -201,8 +201,8 @@
 ### 5.1 Unit Tests (`tests/`)
 | Task | Status | Notes |
 |------|--------|-------|
-| `test_template_engine.py` | ⏳ | Template loading/substitution |
-| `test_obfuscator.py` | ⏳ | String encryption tests |
+| `test_template_engine.py` | ✅ | Template loading/substitution |
+| `test_obfuscator.py` | ✅ | String encryption tests |
 | `test_compiler.py` | ⏳ | Compilation tests |
 | `test_evasion.py` | ⏳ | Evasion injection tests |
 | `test_persistence.py` | ⏳ | Persistence injection tests |
@@ -232,14 +232,14 @@
 ## Recommended Implementation Order
 
 ### Sprint 1: Core Engine
-1. ⏳ `lib/template_engine.py` - Load and substitute templates
+1. ✅ `lib/template_engine.py` - Load and substitute templates
 2. ⏳ `lib/compiler.py` - Go compilation wrapper
 3. ⏳ `generator.py` - Basic CLI with `--c2` and `--output`
 4. ⏳ First working payload (basic template, no obfuscation)
 
 ### Sprint 2: Obfuscation
-1. ⏳ `lib/obfuscator.py` - String encryption (XOR first, then AES)
-2. ⏳ `lib/obfuscator.py` - Identifier randomization
+1. ✅ `lib/obfuscator.py` - String encryption (XOR first, then AES)
+2. ✅ `lib/obfuscator.py` - Identifier randomization
 3. ⏳ Update `generator.py` with `--obfuscation` flag
 
 ### Sprint 3: Evasion
@@ -275,19 +275,19 @@
 | Project Structure | ✅ | 100% |
 | Go Templates | ✅ | 100% (basic + syscalls) |
 | Configuration | ✅ | 100% |
-| Python Modules | 🔄 | 5% (headers only) |
+| Python Modules | 🔄 | 25% (template_engine + obfuscator complete) |
 | Snippets | ⏳ | 0% |
-| Tests | ⏳ | 0% |
+| Tests | 🔄 | 25% (template_engine + obfuscator tests) |
 | CLI Integration | ⏳ | 0% |
 
-**Next Action:** Start Sprint 1 - Implement `lib/template_engine.py`
+**Next Action:** Start Sprint 1 - Implement `lib/compiler.py`
 
 ---
 
 ## Notes
 
 - Go templates have working evasion code (AMSI/ETW bypass, sandbox detection)
-- Python modules are skeleton only - need full implementation
+- Python modules: `template_engine.py` fully implemented, others are skeleton only
 - Focus on Go implants first; C templates are optional/future
 - Code signing is MANDATORY for production payloads
 - Always reference MITRE ATT&CK techniques in evasion code

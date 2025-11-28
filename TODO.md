@@ -117,31 +117,34 @@
 ### 2.6 Forensics Evasion (`lib/forensics_evasion.py`)
 | Task | Status | Notes |
 |------|--------|-------|
-| Event log clearing | ⏳ | Clear Security/System logs |
-| Timestamp stomping | ⏳ | Modify MACB times |
-| Prefetch clearing | ⏳ | Delete `.pf` files |
+| Event log clearing | ✅ | Clear Security/System/Application/PowerShell logs |
+| Timestamp stomping | ✅ | Modify MACB times via SetFileTime |
+| Prefetch clearing | ✅ | Delete `.pf` files |
+| Recent files clearing | ✅ | Clear Recent folder shortcuts |
 | USN journal manipulation | ⏳ | Advanced - lower priority |
 
 **Subtasks:**
-- [ ] `get_eventlog_clear_code() -> str`
-- [ ] `get_timestamp_stomp_code() -> str`
-- [ ] `get_prefetch_clear_code() -> str`
-- [ ] `inject_forensics_evasion(template: str, config: dict) -> str`
+- [x] `get_eventlog_clear_code() -> str`
+- [x] `get_timestamp_stomp_code() -> str`
+- [x] `get_prefetch_clear_code() -> str`
+- [x] `get_forensics_imports() -> str`
+- [x] `inject_forensics_evasion(template: str, config: dict) -> str`
+- [x] `get_available_forensics_techniques() -> dict`
 
 ### 2.7 Packer (`lib/packer.py`)
 | Task | Status | Notes |
 |------|--------|-------|
-| PE section encryption | ⏳ | Encrypt .text/.data |
-| Custom loader stub | ⏳ | Decryption at runtime |
-| Entropy manipulation | ⏳ | Reduce entropy score |
-| Certificate signing | ⏳ | Self-signed/custom certs |
+| PE section encryption | ✅ | Encrypt .text/.data sections with XOR/AES |
+| Custom loader stub | ✅ | x64 shellcode for runtime decryption |
+| Entropy manipulation | ✅ | Reduce entropy score with padding |
+| Certificate signing | ✅ | osslsigncode/signtool support |
 
 **Subtasks:**
-- [ ] `encrypt_pe_sections(pe_path: str, key: bytes) -> bytes`
-- [ ] `generate_loader_stub(key: bytes) -> bytes`
-- [ ] `manipulate_entropy(pe_path: str) -> None`
-- [ ] `sign_binary(pe_path: str, cert_path: str, password: str) -> bool`
-- [ ] `generate_selfsigned_cert() -> tuple[str, str]` (cert, key paths)
+- [x] `encrypt_pe_sections(pe_path: str, key: bytes) -> bytes`
+- [x] `generate_loader_stub(key: bytes) -> bytes`
+- [x] `manipulate_entropy(pe_path: str) -> None`
+- [x] `sign_binary(pe_path: str, cert_path: str, password: str) -> bool`
+- [x] `generate_selfsigned_cert() -> tuple[str, str]` (cert, key paths)
 
 ---
 
@@ -193,9 +196,9 @@
 ### 4.3 Forensics Snippets
 | Task | Status | Notes |
 |------|--------|-------|
-| `forensics_eventlog_clear.go` | ⏳ | Event log clearing |
-| `forensics_timestamp_stomp.go` | ⏳ | Timestamp stomping |
-| `forensics_prefetch_clear.go` | ⏳ | Prefetch deletion |
+| `forensics_eventlog_clear.go` | ✅ | Event log clearing |
+| `forensics_timestamp_stomp.go` | ✅ | Timestamp stomping |
+| `forensics_prefetch_clear.go` | ✅ | Prefetch deletion |
 | `forensics_usn_journal.go` | ⏳ | USN journal manipulation |
 
 ---
@@ -209,8 +212,9 @@
 | `test_obfuscator.py` | ✅ | String encryption tests |
 | `test_compiler.py` | ✅ | Compilation tests |
 | `test_evasion.py` | ✅ | Evasion injection tests |
-| `test_persistence.py` | ✅ | Persistence injection tests (71 tests) |
-| `test_packer.py` | ⏳ | PE manipulation tests |
+| `test_persistence.py` | ✅ | Persistence injection tests |
+| `test_forensics_evasion.py` | ✅ | Forensics evasion tests (61 tests) |
+| `test_packer.py` | ✅ | PE manipulation tests (54 tests) |
 | `conftest.py` | ⏳ | Pytest fixtures |
 
 ### 5.2 Integration Tests
@@ -256,16 +260,16 @@
 ### Sprint 4: Persistence & Forensics
 1. ✅ Persistence snippets (registry, schtasks, wmi, com_hijack)
 2. ✅ `lib/persistence.py` - Inject persistence code
-3. ⏳ Forensics snippets (eventlog, timestamp)
-4. ⏳ `lib/forensics_evasion.py` - Inject forensics evasion
+3. ✅ Forensics snippets (eventlog, timestamp, prefetch)
+4. ✅ `lib/forensics_evasion.py` - Inject forensics evasion
 
 ### Sprint 5: Packing & Signing
-1. ⏳ `lib/packer.py` - PE section encryption
-2. ⏳ `lib/packer.py` - Certificate signing
+1. ✅ `lib/packer.py` - PE section encryption
+2. ✅ `lib/packer.py` - Certificate signing
 3. ⏳ End-to-end pipeline integration
 
 ### Sprint 6: Testing & Polish
-1. ✅ Unit tests for all modules (252 tests passing)
+1. ✅ Unit tests for all modules (364 tests passing)
 2. ⏳ Integration tests
 3. ⏳ Documentation updates
 4. ⏳ AV/EDR testing in lab environment
@@ -279,19 +283,19 @@
 | Project Structure | ✅ | 100% |
 | Go Templates | ✅ | 100% (basic + syscalls) |
 | Configuration | ✅ | 100% |
-| Python Modules | 🔄 | 60% (template_engine + obfuscator + compiler + evasion + persistence) |
-| Snippets | 🔄 | 70% (evasion + persistence snippets complete) |
-| Tests | ✅ | 100% (252 tests passing) |
+| Python Modules | ✅ | 100% (template_engine + obfuscator + compiler + evasion + persistence + forensics_evasion + packer) |
+| Snippets | ✅ | 90% (evasion + persistence + forensics snippets complete) |
+| Tests | ✅ | 100% (364 tests passing) |
 | CLI Integration | ⏳ | 0% |
 
-**Next Action:** Start Sprint 1 - Implement `generator.py` CLI
+**Next Action:** Start Sprint 3 - Implement `generator.py` CLI
 
 ---
 
 ## Notes
 
 - Go templates have working evasion code (AMSI/ETW bypass, sandbox detection)
-- Python modules: `template_engine.py`, `obfuscator.py`, `compiler.py`, `evasion.py`, `persistence.py` fully implemented
+- Python modules: `template_engine.py`, `obfuscator.py`, `compiler.py`, `evasion.py`, `persistence.py`, `forensics_evasion.py`, `packer.py` fully implemented
 - Focus on Go implants first; C templates are optional/future
 - Code signing is MANDATORY for production payloads
 - Always reference MITRE ATT&CK techniques in evasion code

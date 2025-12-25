@@ -1,100 +1,72 @@
-# Attack & Defense CTF System
+# ADG Core - CTF Attack-Defense Game Engine
 
-A scalable attack-defense CTF infrastructure with dynamic flag rotation, two-flag system, and real-time scoring.
+Core engine for Attack-Defense CTF competitions.
 
-## Features
+## Quick Start
 
-- **Two-Flag System**: User flags (50 pts) and root flags (150 pts) requiring different exploitation techniques
-- **Dynamic Flags**: Flags rotate every 60 seconds with HMAC-based generation
-- **Docker API Integration**: Robust flag injection using Docker Python API
-- **Real-time Scoring**: Attack points, defense points, and SLA tracking
-- **Modular Architecture**: Clean separation of concerns with focused modules
+```bash
+# Install dependencies
+uv venv
+source .venv/bin/activate
+uv pip install -e ".[dev]"
+
+# Setup database
+cp .env.example .env
+# Edit .env with your PostgreSQL settings
+
+# Run migrations
+alembic upgrade head
+
+# Start everything (API + Workers) with one command
+python main.py
+```
+
+ **Note:** This starts the API server on port 8000, tick worker, and checker worker all in a single process. For development with hot-reload, you can still run components separately:
+ ```bash
+ uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+ python -m src.workers.tick_worker
+ python -m src.workers.checker_worker
+ ```
 
 ## Project Structure
 
 ```
-├── gameserver/          # Main gameserver application
-│   ├── models/          # Database models (Team, Service, Flag, etc.)
-│   ├── config/          # Configuration files
-│   ├── flags/           # Flag generation and validation
-│   ├── checker/         # Service checking and flag injection
-│   ├── controller/      # Round/tick management
-│   ├── submission/      # Flag submission server
-│   ├── scoring/         # Scoring system
-│   └── web/             # Web interface and scoreboard
-├── infrastructure/      # Docker Compose and deployment scripts
-├── services/            # Vulnerable services
-├── docs/                # Documentation
-└── tests/               # Test suite
+src/
+├── api/          # FastAPI endpoints
+├── schemas/      # Pydantic validation
+├── models/       # SQLAlchemy ORM
+├── services/     # Business logic
+├── workers/      # Background tasks
+└── core/         # Config, DB, exceptions
 ```
 
-## Quick Start
+## API Endpoints
 
-### Prerequisites
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/games` | Create game |
+| GET | `/games/{id}` | Get game |
+| POST | `/games/{id}/vulnbox` | Upload vulnbox.zip |
+| POST | `/games/{id}/checker` | Upload checker.py |
+| POST | `/games/{id}/teams` | Add team |
+| POST | `/games/{id}/start` | Start game |
+| POST | `/submit` | Submit flag |
+| POST | `/checker/status` | Checker SLA report |
+| GET | `/scoreboard/{game_id}` | Get scoreboard |
 
-- Python 3.11+
-- Docker and Docker Compose
-- PostgreSQL 16
-- Redis 7
+## Checker Template
 
-### Installation
+```python
+def check(team_ip: str, game_id: str, team_id: str, tick_number: int) -> dict:
+    return {
+        "status": "up",  # up|down|error
+        "sla": 100.0,    # 0-100
+        "message": None  # optional
+    }
+```
+
+## Docker Compose
 
 ```bash
-# Clone repository
-git clone <repository-url>
-cd sliverpayload
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Setup database
-python manage.py migrate
-
-# Create superuser
-python manage.py createsuperuser
+docker-compose up -d  # Start PostgreSQL
 ```
-
-### Running the Gameserver
-
-```bash
-# Start services
-docker-compose up -d
-
-# Run gameserver components
-python manage.py runserver          # Web interface
-python -m gameserver.controller     # Tick controller
-celery -A gameserver worker         # Checker workers
-python -m gameserver.submission     # Flag submission server
-```
-
-## Configuration
-
-Edit `gameserver/config/game_config.py`:
-
-- `TICK_DURATION_SECONDS`: Round duration (default: 60s)
-- `FLAG_VALIDITY_TICKS`: How long flags are valid (default: 5 ticks)
-- Scoring parameters
-- Docker and network settings
-
-## Development Status
-
-🚧 **Active Development** - Phase 1 (Foundation) completed:
-
-- ✅ Database models (Team, Service, Flag, Tick, ServiceStatus, Submission, Score)
-- ✅ Flag generation system with HMAC-based uniqueness
-- ✅ Docker API flag injector
-- ✅ Configuration system
-- 🔄 Controller and checker system (in progress)
-- ⏳ Submission server
-- ⏳ Scoring system
-- ⏳ Web interface
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-This project is open source and free to use for educational purposes, CTF competitions, and security training.
-
-## Contributors
-
-Created as an Attack & Defense CTF infrastructure for cybersecurity competitions and training.

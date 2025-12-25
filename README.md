@@ -49,6 +49,7 @@ src/
 | POST | `/games/{id}/vulnbox` | Upload vulnbox.zip |
 | POST | `/games/{id}/checker` | Upload checker.py |
 | POST | `/games/{id}/teams` | Add team |
+| GET  | `/games/{id}/teams` | List teams |
 | POST | `/games/{id}/start` | Start game |
 | POST | `/submit` | Submit flag |
 | POST | `/checker/status` | Checker SLA report |

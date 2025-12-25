@@ -66,6 +66,9 @@ async def deploy_team_container(
     game_id: uuid.UUID,
     team_id: str,
     image_tag: str,
+    ssh_port: int,
+    ssh_username: str,
+    ssh_password: str,
 ) -> tuple[str, str]:
     container_name = f"adg-{game_id}-{team_id}"
     
@@ -84,6 +87,11 @@ async def deploy_team_container(
             detach=True,
             network_mode="bridge",
             auto_remove=False,
+            ports={"22/tcp": ssh_port},
+            environment={
+                "SSH_USERNAME": ssh_username,
+                "SSH_PASSWORD": ssh_password,
+            },
         )
         
         container.reload()
@@ -96,6 +104,19 @@ async def deploy_team_container(
         return container_name, ip_address
     
     return await asyncio.to_thread(_deploy)
+
+
+def generate_ssh_credentials() -> tuple[str, str]:
+    import secrets
+    import string
+    
+    username_suffix = secrets.token_hex(4)
+    username = f"ctf_{username_suffix}"
+    
+    alphabet = string.ascii_letters + string.digits + "!@#$%"
+    password = "".join(secrets.choice(alphabet) for _ in range(16))
+    
+    return username, password
 
 
 async def stop_team_container(container_name: str) -> None:

@@ -43,6 +43,9 @@ class GameTeamResponse(BaseModel):
     team_id: str
     container_name: str | None
     container_ip: str | None
+    ssh_username: str | None
+    ssh_password: str | None
+    ssh_port: int | None
     token: str
     is_active: bool
     created_at: datetime

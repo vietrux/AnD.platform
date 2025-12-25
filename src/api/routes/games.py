@@ -173,15 +173,37 @@ async def start_game(
     
     image_tag = await docker_service.build_vulnbox_image(game_id, game.vulnbox_path)
     
-    for team in teams:
+    settings = get_settings()
+    team_credentials = []
+    
+    for idx, team in enumerate(teams):
+        ssh_port = settings.ssh_port_base + idx + 1
+        ssh_username, ssh_password = docker_service.generate_ssh_credentials()
+        
         container_name, container_ip = await docker_service.deploy_team_container(
-            game_id, team.team_id, image_tag
+            game_id, team.team_id, image_tag, ssh_port, ssh_username, ssh_password
         )
-        await game_service.update_game_team_container(db, team, container_name, container_ip)
+        
+        await game_service.update_game_team_container(
+            db, team, container_name, container_ip, ssh_username, ssh_password, ssh_port
+        )
+        
+        team_credentials.append({
+            "team_id": team.team_id,
+            "container_ip": container_ip,
+            "ssh_host": settings.ssh_host,
+            "ssh_port": ssh_port,
+            "ssh_username": ssh_username,
+            "ssh_password": ssh_password,
+        })
     
     await game_service.update_game_status(db, game, GameStatus.RUNNING)
     
-    return {"message": "Game started", "teams_deployed": len(teams)}
+    return {
+        "message": "Game started",
+        "teams_deployed": len(teams),
+        "teams": team_credentials,
+    }
 
 
 @router.post("/{game_id}/pause")

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     flag_secret_key: str = "change-this-hmac-secret-key"
     
     upload_dir: str = "./uploads"
+    
+    ssh_port_base: int = 22000
+    ssh_host: str = "0.0.0.0"
 
     class Config:
         env_file = ".env"

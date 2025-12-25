@@ -52,6 +52,10 @@ class GameTeam(Base):
     container_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     container_ip: Mapped[str | None] = mapped_column(String(50), nullable=True)
     
+    ssh_username: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ssh_password: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    ssh_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    
     token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

@@ -5,6 +5,9 @@ Core engine for Attack-Defense CTF competitions.
 ## Quick Start
 
 ```bash
+# Deploy db
+docker compose up -d
+
 # Install dependencies
 uv venv
 source .venv/bin/activate

@@ -233,22 +233,7 @@ async def get_game_team(
     return game_team
 
 
-@router.patch("/{game_id}/teams/{team_id}", response_model=GameTeamResponse)
-async def update_game_team(
-    game_id: uuid.UUID,
-    team_id: str,
-    data: GameTeamUpdate,
-    db: AsyncSession = Depends(get_db),
-):
-    game = await game_service.get_game(db, game_id)
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    game_team = await game_service.get_game_team(db, game_id, team_id)
-    if not game_team:
-        raise TeamNotFoundError().to_http_exception()
-    
-    return await game_service.update_game_team(db, game_team, data)
+
 
 
 @router.delete("/{game_id}/teams/{team_id}", response_model=DeleteResponse)

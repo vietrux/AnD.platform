@@ -1,7 +1,7 @@
-"""Flags API routes with full CRUD operations."""
+"""Flags API routes - Read-only operations for admin/debug."""
 
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,12 +11,7 @@ from src.core.exceptions import (
     FlagNotFoundError,
     TickNotFoundError,
 )
-from src.schemas import (
-    FlagResponse,
-    FlagListResponse,
-    FlagUpdate,
-    DeleteResponse,
-)
+from src.schemas import FlagResponse, FlagListResponse
 from src.services import game_service, flag_service, tick_service
 
 
@@ -24,16 +19,11 @@ router = APIRouter(prefix="/flags", tags=["flags"])
 
 
 class FlagStats(BaseModel):
-    """Flag statistics response."""
     total_flags: int
     stolen_flags: int
     not_stolen_flags: int
     total_steals: int
 
-
-# ============================================================================
-# Flag CRUD Operations
-# ============================================================================
 
 @router.get("", response_model=FlagListResponse)
 async def list_flags(
@@ -45,9 +35,6 @@ async def list_flags(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    List all flags for a game with filtering.
-    """
     game = await game_service.get_game(db, game_id)
     if not game:
         raise GameNotFoundError().to_http_exception()
@@ -75,9 +62,6 @@ async def get_flag_stats(
     team_id: str | None = Query(None, description="Filter by team ID"),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get flag statistics for a game or team.
-    """
     game = await game_service.get_game(db, game_id)
     if not game:
         raise GameNotFoundError().to_http_exception()
@@ -91,9 +75,6 @@ async def get_flag_by_value(
     flag_value: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get a flag by its value.
-    """
     flag = await flag_service.get_flag_by_value(db, flag_value)
     if not flag:
         raise FlagNotFoundError().to_http_exception()
@@ -106,55 +87,12 @@ async def get_flag(
     flag_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get a specific flag by ID.
-    """
     flag = await flag_service.get_flag(db, flag_id)
     if not flag:
         raise FlagNotFoundError().to_http_exception()
     
     return flag
 
-
-@router.patch("/{flag_id}", response_model=FlagResponse)
-async def update_flag(
-    flag_id: uuid.UUID,
-    data: FlagUpdate,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Update a flag's properties.
-    
-    Note: Flag value cannot be changed after creation.
-    """
-    flag = await flag_service.get_flag(db, flag_id)
-    if not flag:
-        raise FlagNotFoundError().to_http_exception()
-    
-    return await flag_service.update_flag(db, flag, data)
-
-
-@router.delete("/{flag_id}", response_model=DeleteResponse)
-async def delete_flag(
-    flag_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Delete a flag.
-    
-    Note: This will also affect related submissions.
-    """
-    flag = await flag_service.get_flag(db, flag_id)
-    if not flag:
-        raise FlagNotFoundError().to_http_exception()
-    
-    await flag_service.delete_flag(db, flag_id)
-    return DeleteResponse(deleted_id=flag_id)
-
-
-# ============================================================================
-# Tick-based Flag Operations
-# ============================================================================
 
 @router.get("/tick/{tick_id}", response_model=FlagListResponse)
 async def get_tick_flags(
@@ -163,9 +101,6 @@ async def get_tick_flags(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get all flags for a specific tick.
-    """
     tick = await tick_service.get_tick(db, tick_id)
     if not tick:
         raise TickNotFoundError().to_http_exception()
@@ -187,9 +122,6 @@ async def get_team_tick_flags(
     game_id: uuid.UUID = Query(..., description="Game ID"),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get flags for a specific team in a specific tick.
-    """
     game = await game_service.get_game(db, game_id)
     if not game:
         raise GameNotFoundError().to_http_exception()
@@ -200,20 +132,3 @@ async def get_team_tick_flags(
     
     flags = await flag_service.get_team_flags_for_tick(db, game_id, team_id, tick_id)
     return [FlagResponse.model_validate(f) for f in flags]
-
-
-@router.post("/{flag_id}/mark-stolen", response_model=FlagResponse)
-async def mark_flag_stolen(
-    flag_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Manually mark a flag as stolen.
-    
-    This is primarily for administrative purposes.
-    """
-    flag = await flag_service.get_flag(db, flag_id)
-    if not flag:
-        raise FlagNotFoundError().to_http_exception()
-    
-    return await flag_service.mark_flag_stolen(db, flag)

@@ -119,3 +119,64 @@ async def update_game_team_container(
     await db.commit()
     await db.refresh(game_team)
     return game_team
+
+
+async def delete_game(db: AsyncSession, game_id: uuid.UUID) -> bool:
+    game = await get_game(db, game_id)
+    if game:
+        await db.delete(game)
+        await db.commit()
+        return True
+    return False
+
+
+async def get_game_team(
+    db: AsyncSession, game_id: uuid.UUID, team_id: str
+) -> GameTeam | None:
+    result = await db.execute(
+        select(GameTeam).where(
+            GameTeam.game_id == game_id, 
+            GameTeam.team_id == team_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_game_team(
+    db: AsyncSession, game_team: GameTeam, data
+) -> GameTeam:
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(game_team, field, value)
+    await db.commit()
+    await db.refresh(game_team)
+    return game_team
+
+
+async def delete_game_team(
+    db: AsyncSession, game_id: uuid.UUID, team_id: str
+) -> bool:
+    game_team = await get_game_team(db, game_id, team_id)
+    if game_team:
+        game_team.is_active = False
+        await db.commit()
+        return True
+    return False
+
+
+async def assign_vulnbox(db: AsyncSession, game: Game, vulnbox) -> Game:
+    game.vulnbox_id = vulnbox.id
+    game.vulnbox_path = vulnbox.path
+    await db.commit()
+    await db.refresh(game)
+    return game
+
+
+async def assign_checker(db: AsyncSession, game: Game, checker) -> Game:
+    game.checker_id = checker.id
+    game.checker_module = checker.module_name
+    await db.commit()
+    await db.refresh(game)
+    return game
+
+

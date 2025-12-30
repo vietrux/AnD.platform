@@ -23,6 +23,13 @@ class Game(Base):
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     
+    vulnbox_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vulnboxes.id"), nullable=True
+    )
+    checker_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("checkers.id"), nullable=True
+    )
+    
     vulnbox_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     checker_module: Mapped[str | None] = mapped_column(String(200), nullable=True)
     
@@ -37,9 +44,13 @@ class Game(Base):
     end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+    vulnbox: Mapped["Vulnbox | None"] = relationship("Vulnbox", foreign_keys=[vulnbox_id])
+    checker: Mapped["Checker | None"] = relationship("Checker", foreign_keys=[checker_id])
     game_teams: Mapped[list["GameTeam"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     ticks: Mapped[list["Tick"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     flags: Mapped[list["Flag"]] = relationship(back_populates="game", cascade="all, delete-orphan")
+
+
 
 
 class GameTeam(Base):

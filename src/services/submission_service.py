@@ -156,3 +156,65 @@ async def update_team_defense_score(
     if scoreboard:
         scoreboard.flags_lost += 1
         scoreboard.last_updated = datetime.utcnow()
+
+
+async def list_submissions(
+    db: AsyncSession,
+    game_id: uuid.UUID | None = None,
+    team_id: str | None = None,
+    status: SubmissionStatus | None = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[FlagSubmission]:
+    query = select(FlagSubmission)
+    
+    if game_id:
+        query = query.where(FlagSubmission.game_id == game_id)
+    if team_id:
+        query = query.where(FlagSubmission.attacker_team_id == team_id)
+    if status:
+        query = query.where(FlagSubmission.status == status)
+    
+    query = query.order_by(FlagSubmission.submitted_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def get_submission(
+    db: AsyncSession, submission_id: uuid.UUID
+) -> FlagSubmission | None:
+    result = await db.execute(
+        select(FlagSubmission).where(FlagSubmission.id == submission_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def count_submissions(
+    db: AsyncSession,
+    game_id: uuid.UUID | None = None,
+    team_id: str | None = None,
+    status: SubmissionStatus | None = None,
+) -> int:
+    query = select(func.count(FlagSubmission.id))
+    
+    if game_id:
+        query = query.where(FlagSubmission.game_id == game_id)
+    if team_id:
+        query = query.where(FlagSubmission.attacker_team_id == team_id)
+    if status:
+        query = query.where(FlagSubmission.status == status)
+    
+    result = await db.execute(query)
+    return result.scalar() or 0
+
+
+async def delete_submission(
+    db: AsyncSession, submission_id: uuid.UUID
+) -> bool:
+    submission = await get_submission(db, submission_id)
+    if submission:
+        await db.delete(submission)
+        await db.commit()
+        return True
+    return False
+

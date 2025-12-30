@@ -6,7 +6,12 @@ from src.api.routes import (
     games_router,
     checker_router,
     submission_router,
+    submissions_router,
     scoreboard_router,
+    flags_router,
+    ticks_router,
+    vulnboxes_router,
+    checkers_router,
 )
 
 
@@ -26,9 +31,14 @@ def create_app() -> FastAPI:
     )
     
     app.include_router(games_router)
+    app.include_router(vulnboxes_router)
+    app.include_router(checkers_router)
     app.include_router(checker_router)
     app.include_router(submission_router)
+    app.include_router(submissions_router)
     app.include_router(scoreboard_router)
+    app.include_router(flags_router)
+    app.include_router(ticks_router)
     
     @app.get("/health")
     async def health_check():

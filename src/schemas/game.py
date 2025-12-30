@@ -21,7 +21,14 @@ class GameTeamAdd(BaseModel):
     team_id: str = Field(..., min_length=1, max_length=100)
 
 
+class GameTeamUpdate(BaseModel):
+    is_active: bool | None = None
+    container_name: str | None = None
+    container_ip: str | None = None
+
+
 class GameResponse(BaseModel):
+
     id: uuid.UUID
     name: str
     description: str | None

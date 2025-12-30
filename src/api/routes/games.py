@@ -3,15 +3,17 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core import get_db, get_settings
+from src.core import get_db, get_settings, CannotDeleteRunningGameError, TeamNotFoundError
 from src.models import GameStatus
 from src.schemas import (
     GameCreate,
     GameUpdate,
     GameTeamAdd,
+    GameTeamUpdate,
     GameResponse,
     GameTeamResponse,
     GameListResponse,
+    DeleteResponse,
 )
 from src.services import game_service, docker_service
 
@@ -238,3 +240,125 @@ async def stop_game(
     
     await game_service.update_game_status(db, game, GameStatus.FINISHED)
     return {"message": "Game stopped", "containers_removed": len(teams)}
+
+
+@router.delete("/{game_id}", response_model=DeleteResponse)
+async def delete_game(
+    game_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status in [GameStatus.RUNNING, GameStatus.DEPLOYING]:
+        raise CannotDeleteRunningGameError().to_http_exception()
+    
+    teams = await game_service.get_game_teams(db, game_id)
+    for team in teams:
+        if team.container_name:
+            await docker_service.stop_team_container(team.container_name)
+    
+    await game_service.delete_game(db, game_id)
+    return DeleteResponse(deleted_id=game_id)
+
+
+@router.get("/{game_id}/teams/{team_id}", response_model=GameTeamResponse)
+async def get_game_team(
+    game_id: uuid.UUID,
+    team_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    game_team = await game_service.get_game_team(db, game_id, team_id)
+    if not game_team:
+        raise TeamNotFoundError().to_http_exception()
+    
+    return game_team
+
+
+@router.patch("/{game_id}/teams/{team_id}", response_model=GameTeamResponse)
+async def update_game_team(
+    game_id: uuid.UUID,
+    team_id: str,
+    data: GameTeamUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    game_team = await game_service.get_game_team(db, game_id, team_id)
+    if not game_team:
+        raise TeamNotFoundError().to_http_exception()
+    
+    return await game_service.update_game_team(db, game_team, data)
+
+
+@router.delete("/{game_id}/teams/{team_id}", response_model=DeleteResponse)
+async def remove_team(
+    game_id: uuid.UUID,
+    team_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    game_team = await game_service.get_game_team(db, game_id, team_id)
+    if not game_team:
+        raise TeamNotFoundError().to_http_exception()
+    
+    if game_team.container_name:
+        await docker_service.stop_team_container(game_team.container_name)
+    
+    await game_service.delete_game_team(db, game_id, team_id)
+    return DeleteResponse(deleted_id=game_team.id)
+
+
+@router.post("/{game_id}/assign-vulnbox", response_model=GameResponse)
+async def assign_vulnbox(
+    game_id: uuid.UUID,
+    vulnbox_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    from src.services import vulnbox_service
+    
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Can only assign vulnbox in draft state")
+    
+    vulnbox = await vulnbox_service.get_vulnbox(db, vulnbox_id)
+    if not vulnbox:
+        raise HTTPException(status_code=404, detail="Vulnbox not found")
+    
+    return await game_service.assign_vulnbox(db, game, vulnbox)
+
+
+@router.post("/{game_id}/assign-checker", response_model=GameResponse)
+async def assign_checker(
+    game_id: uuid.UUID,
+    checker_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    from src.services import checker_crud_service
+    
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Can only assign checker in draft state")
+    
+    checker = await checker_crud_service.get_checker(db, checker_id)
+    if not checker:
+        raise HTTPException(status_code=404, detail="Checker not found")
+    
+    return await game_service.assign_checker(db, game, checker)
+

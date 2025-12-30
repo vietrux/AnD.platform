@@ -70,57 +70,10 @@ async def update_game(
     return await game_service.update_game(db, game, data)
 
 
-@router.post("/{game_id}/vulnbox")
-async def upload_vulnbox(
-    game_id: uuid.UUID,
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-):
-    game = await game_service.get_game(db, game_id)
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    if game.status != GameStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Can only upload vulnbox in draft state")
-    
-    if not file.filename.endswith(".zip"):
-        raise HTTPException(status_code=400, detail="File must be a ZIP archive")
-    
-    content = await file.read()
-    vulnbox_path = await docker_service.extract_vulnbox(game_id, content)
-    await game_service.set_game_vulnbox_path(db, game, vulnbox_path)
-    
-    return {"message": "Vulnbox uploaded", "path": vulnbox_path}
 
 
-@router.post("/{game_id}/checker")
-async def upload_checker(
-    game_id: uuid.UUID,
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-):
-    game = await game_service.get_game(db, game_id)
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    if game.status != GameStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Can only upload checker in draft state")
-    
-    if not file.filename.endswith(".py"):
-        raise HTTPException(status_code=400, detail="File must be a Python file")
-    
-    settings = get_settings()
-    checker_dir = Path(settings.upload_dir) / "checkers"
-    checker_dir.mkdir(parents=True, exist_ok=True)
-    
-    checker_path = checker_dir / f"{game_id}_checker.py"
-    content = await file.read()
-    checker_path.write_bytes(content)
-    
-    module_name = f"uploads.checkers.{game_id}_checker"
-    await game_service.set_game_checker_module(db, game, module_name)
-    
-    return {"message": "Checker uploaded", "module": module_name}
+
+
 
 
 @router.post("/{game_id}/teams", response_model=GameTeamResponse)

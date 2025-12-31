@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from sqlalchemy import select
 
-from src.core.database import async_session_maker
+from src.core.database import async_session_maker, wait_for_db
 from src.core.config import get_settings
 from src.models import Game, GameStatus, Tick, TickStatus, FlagType, GameTeam
 from src.services import game_service, flag_service, docker_service, scoring_service
@@ -23,6 +23,7 @@ class TickWorker:
     async def start(self):
         self.running = True
         logger.info("Tick worker started")
+        await wait_for_db()
         await self.run_loop()
     
     def stop(self):

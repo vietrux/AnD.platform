@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from src.core.database import engine, Base
+from src.core.database import init_db
 from src.api.routes import (
     games_router,
     checker_router,
@@ -17,8 +17,7 @@ from src.api.routes import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await init_db()
     yield
 
 

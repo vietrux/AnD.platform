@@ -3,7 +3,7 @@ import hmac
 import hashlib
 import secrets
 from datetime import datetime, timedelta
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
@@ -36,6 +36,19 @@ async def create_flag(
     tick: Tick,
     flag_type: FlagType,
 ) -> Flag:
+    # Check if flag already exists for this game/team/tick/type
+    existing = await db.execute(
+        select(Flag).where(
+            Flag.game_id == game_id,
+            Flag.team_id == team_id,
+            Flag.tick_id == tick.id,
+            Flag.flag_type == flag_type,
+        )
+    )
+    existing_flag = existing.scalar_one_or_none()
+    if existing_flag:
+        return existing_flag
+    
     settings = get_settings()
     
     flag_value = generate_flag_value(game_id, team_id, tick.tick_number, flag_type)
@@ -54,6 +67,11 @@ async def create_flag(
     await db.commit()
     await db.refresh(flag)
     return flag
+
+
+async def get_flag(db: AsyncSession, flag_id: uuid.UUID) -> Flag | None:
+    result = await db.execute(select(Flag).where(Flag.id == flag_id))
+    return result.scalar_one_or_none()
 
 
 async def get_flag_by_value(db: AsyncSession, flag_value: str) -> Flag | None:
@@ -83,3 +101,97 @@ async def get_team_flags_for_tick(
         )
     )
     return list(result.scalars().all())
+
+
+async def list_flags(
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[Flag]:
+    result = await db.execute(
+        select(Flag)
+        .where(Flag.game_id == game_id)
+        .order_by(Flag.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def list_team_flags(
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    team_id: str,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[Flag]:
+    result = await db.execute(
+        select(Flag)
+        .where(Flag.game_id == game_id, Flag.team_id == team_id)
+        .order_by(Flag.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
+async def list_tick_flags(
+    db: AsyncSession,
+    tick_id: uuid.UUID,
+) -> list[Flag]:
+    result = await db.execute(
+        select(Flag)
+        .where(Flag.tick_id == tick_id)
+        .order_by(Flag.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def count_flags(
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    is_stolen: bool | None = None,
+) -> int:
+    query = select(func.count()).select_from(Flag).where(Flag.game_id == game_id)
+    if is_stolen is not None:
+        query = query.where(Flag.is_stolen == is_stolen)
+    result = await db.execute(query)
+    return result.scalar() or 0
+
+
+async def get_flag_stats(
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    team_id: str | None = None,
+) -> dict:
+    # Total flags
+    total_query = select(func.count()).select_from(Flag).where(Flag.game_id == game_id)
+    if team_id:
+        total_query = total_query.where(Flag.team_id == team_id)
+    total_result = await db.execute(total_query)
+    total_flags = total_result.scalar() or 0
+    
+    # Stolen flags
+    stolen_query = select(func.count()).select_from(Flag).where(
+        Flag.game_id == game_id,
+        Flag.is_stolen == True,
+    )
+    if team_id:
+        stolen_query = stolen_query.where(Flag.team_id == team_id)
+    stolen_result = await db.execute(stolen_query)
+    stolen_flags = stolen_result.scalar() or 0
+    
+    # Total steals (sum of stolen_count)
+    steals_query = select(func.sum(Flag.stolen_count)).where(Flag.game_id == game_id)
+    if team_id:
+        steals_query = steals_query.where(Flag.team_id == team_id)
+    steals_result = await db.execute(steals_query)
+    total_steals = steals_result.scalar() or 0
+    
+    return {
+        "total_flags": total_flags,
+        "stolen_flags": stolen_flags,
+        "not_stolen_flags": total_flags - stolen_flags,
+        "total_steals": total_steals,
+    }

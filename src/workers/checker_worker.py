@@ -73,6 +73,19 @@ class CheckerWorker:
             if not team.container_ip:
                 continue
             
+            # Check if already checked for this tick
+            from src.models import ServiceStatus
+            existing = await db.execute(
+                select(ServiceStatus).where(
+                    ServiceStatus.game_id == game.id,
+                    ServiceStatus.team_id == team.team_id,
+                    ServiceStatus.tick_id == tick.id,
+                )
+            )
+            if existing.scalar_one_or_none():
+                # Already checked this team for this tick, skip
+                continue
+            
             try:
                 status, sla, message = await self.run_checker(
                     checker, game, team, tick

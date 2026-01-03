@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.models.flag import FlagType
 from src.schemas.common import PaginatedResponse
@@ -15,7 +15,7 @@ class FlagResponse(BaseModel):
     flag_type: FlagType
     is_stolen: bool
     stolen_count: int
-    expires_at: datetime | None
+    valid_until: datetime
     created_at: datetime
 
     class Config:

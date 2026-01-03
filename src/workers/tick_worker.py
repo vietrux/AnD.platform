@@ -62,6 +62,17 @@ class TickWorker:
             await self.execute_tick(db, game, expected_tick)
     
     async def execute_tick(self, db, game: Game, tick_number: int):
+        # Check if tick already exists for this game/tick_number
+        existing_tick = await db.execute(
+            select(Tick).where(
+                Tick.game_id == game.id,
+                Tick.tick_number == tick_number,
+            )
+        )
+        if existing_tick.scalar_one_or_none():
+            # Tick already created, skip
+            return
+        
         logger.info(f"Game {game.name}: Starting tick {tick_number}")
         
         tick = Tick(

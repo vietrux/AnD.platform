@@ -18,12 +18,13 @@ class TickResponse(BaseModel):
     tick_number: int
     status: TickStatus
     flags_placed: int
-    started_at: datetime | None
-    completed_at: datetime | None
+    started_at: datetime | None = Field(None, validation_alias="start_time")
+    completed_at: datetime | None = Field(None, validation_alias="end_time")
     created_at: datetime
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class TickUpdate(BaseModel):

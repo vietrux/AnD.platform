@@ -19,6 +19,20 @@ async def record_service_status(
     error_message: str | None = None,
     check_duration_ms: int | None = None,
 ) -> ServiceStatus:
+    # Check if service status already exists for this game/team/tick
+    result = await db.execute(
+        select(ServiceStatus).where(
+            ServiceStatus.game_id == game_id,
+            ServiceStatus.team_id == team_id,
+            ServiceStatus.tick_id == tick_id,
+        )
+    )
+    existing_status = result.scalar_one_or_none()
+    
+    if existing_status:
+        # Already recorded for this tick, skip
+        return existing_status
+    
     service_status = ServiceStatus(
         game_id=game_id,
         team_id=team_id,
@@ -83,46 +97,3 @@ async def get_scoreboard(db: AsyncSession, game_id: uuid.UUID) -> list[Scoreboar
         .order_by(Scoreboard.rank.asc())
     )
     return list(result.scalars().all())
-
-
-async def get_team_scoreboard(
-    db: AsyncSession, game_id: uuid.UUID, team_id: str
-) -> Scoreboard | None:
-    result = await db.execute(
-        select(Scoreboard).where(
-            Scoreboard.game_id == game_id,
-            Scoreboard.team_id == team_id,
-        )
-    )
-    return result.scalar_one_or_none()
-
-
-async def recalculate_scoreboard(db: AsyncSession, game_id: uuid.UUID) -> None:
-    scoreboards = await get_scoreboard(db, game_id)
-    
-    for scoreboard in scoreboards:
-        scoreboard.total_points = (
-            scoreboard.attack_points + 
-            scoreboard.defense_points + 
-            scoreboard.sla_points
-        )
-        scoreboard.last_updated = datetime.utcnow()
-    
-    await update_rankings(db, game_id)
-
-
-async def reset_scoreboard(db: AsyncSession, game_id: uuid.UUID) -> None:
-    scoreboards = await get_scoreboard(db, game_id)
-    
-    for scoreboard in scoreboards:
-        scoreboard.attack_points = 0
-        scoreboard.defense_points = 0
-        scoreboard.sla_points = 0
-        scoreboard.total_points = 0
-        scoreboard.flags_captured = 0
-        scoreboard.flags_lost = 0
-        scoreboard.rank = 0
-        scoreboard.last_updated = datetime.utcnow()
-    
-    await db.commit()
-

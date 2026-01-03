@@ -73,7 +73,7 @@ function getStatusColor(status: SubmissionStatus): string {
 
 export default function SubmissionsPage() {
   const [games, setGames] = useState<Game[]>([])
-  const [selectedGameId, setSelectedGameId] = useState<string>("")
+  const [selectedGameId, setSelectedGameId] = useState<string>("all")
   const [submissions, setSubmissions] = useState<SubmissionDetail[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -89,7 +89,7 @@ export default function SubmissionsPage() {
     try {
       const response = await api.games.list()
       setGames(response.games)
-      if (response.games.length > 0 && !selectedGameId) {
+      if (response.games.length > 0 && selectedGameId === "all") {
         const runningGame = response.games.find((g) => g.status === "running")
         setSelectedGameId(runningGame?.id ?? response.games[0].id)
       }
@@ -104,7 +104,7 @@ export default function SubmissionsPage() {
     try {
       setIsRefreshing(true)
       const response = await api.submissions.list({
-        game_id: selectedGameId || undefined,
+        game_id: selectedGameId === "all" ? undefined : selectedGameId,
         status: filterStatus === "all" ? undefined : (filterStatus as SubmissionStatus),
         limit: 50,
       })
@@ -192,7 +192,7 @@ export default function SubmissionsPage() {
               <SelectValue placeholder="All games" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All games</SelectItem>
+              <SelectItem value="all">All games</SelectItem>
               {games.map((game) => (
                 <SelectItem key={game.id} value={game.id}>
                   {game.name}

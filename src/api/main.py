@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from src.core.database import init_db
@@ -26,6 +27,14 @@ def create_app() -> FastAPI:
         description="CTF Attack-Defense Game Core Engine",
         version="0.1.0",
         lifespan=lifespan,
+    )
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     
     app.include_router(games_router)

@@ -19,7 +19,8 @@ async def submit_flag(
 ):
     status, points, message = await submission_service.submit_flag(
         db=db,
-        team_token=data.team_token,
+        game_id=data.game_id,
+        team_id=data.team_id,
         submitted_flag=data.flag,
     )
     
@@ -69,51 +70,6 @@ async def get_submission(
     return submission
 
 
-@router.get("/game/{game_id}", response_model=SubmissionListResponse)
-async def list_game_submissions(
-    game_id: uuid.UUID,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-):
-    game = await game_service.get_game(db, game_id)
-    if not game:
-        raise GameNotFoundError().to_http_exception()
-    
-    submissions = await submission_service.list_submissions(
-        db, game_id=game_id, skip=skip, limit=limit
-    )
-    total = await submission_service.count_submissions(db, game_id)
-    
-    return SubmissionListResponse.create(
-        items=[SubmissionDetailResponse.model_validate(s) for s in submissions],
-        total=total,
-        skip=skip,
-        limit=limit,
-    )
-
-
-@router.get("/team/{team_id}", response_model=SubmissionListResponse)
-async def list_team_submissions(
-    team_id: str,
-    game_id: uuid.UUID | None = Query(None, description="Filter by game ID"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-):
-    submissions = await submission_service.list_submissions(
-        db, game_id=game_id, team_id=team_id, skip=skip, limit=limit
-    )
-    total = await submission_service.count_submissions(db, game_id, team_id)
-    
-    return SubmissionListResponse.create(
-        items=[SubmissionDetailResponse.model_validate(s) for s in submissions],
-        total=total,
-        skip=skip,
-        limit=limit,
-    )
-
-
 @router.delete("/{submission_id}", response_model=DeleteResponse)
 async def delete_submission(
     submission_id: uuid.UUID,
@@ -125,3 +81,4 @@ async def delete_submission(
     
     await submission_service.delete_submission(db, submission_id)
     return DeleteResponse(deleted_id=submission_id)
+

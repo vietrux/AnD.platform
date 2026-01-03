@@ -24,10 +24,10 @@ class Game(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     vulnbox_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("vulnboxes.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("vulnboxes.id", ondelete="SET NULL"), nullable=True
     )
     checker_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("checkers.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("checkers.id", ondelete="SET NULL"), nullable=True
     )
     
     vulnbox_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -66,8 +66,6 @@ class GameTeam(Base):
     ssh_username: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ssh_password: Mapped[str | None] = mapped_column(String(100), nullable=True)
     ssh_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    
-    token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

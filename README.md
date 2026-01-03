@@ -199,7 +199,7 @@ curl -X POST "http://localhost:8000/games/{id}/start"
 ```bash
 curl -X POST "http://localhost:8000/submissions" \
   -H "Content-Type: application/json" \
-  -d '{"team_token": "token", "flag": "FLAG{...}"}'
+  -d '{"game_id": "GAME_UUID", "team_id": "team1", "flag": "FLAG{...}"}'
 
 # View scoreboard
 curl "http://localhost:8000/scoreboard/{game_id}"

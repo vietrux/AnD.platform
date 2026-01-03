@@ -1,5 +1,4 @@
 import uuid
-import secrets
 from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,11 +70,9 @@ async def set_game_checker_module(db: AsyncSession, game: Game, module: str) -> 
 
 
 async def add_team_to_game(db: AsyncSession, game_id: uuid.UUID, team_id: str) -> GameTeam:
-    token = secrets.token_hex(32)
     game_team = GameTeam(
         game_id=game_id,
         team_id=team_id,
-        token=token,
     )
     db.add(game_team)
     
@@ -90,9 +87,7 @@ async def add_team_to_game(db: AsyncSession, game_id: uuid.UUID, team_id: str) -
     return game_team
 
 
-async def get_game_team_by_token(db: AsyncSession, token: str) -> GameTeam | None:
-    result = await db.execute(select(GameTeam).where(GameTeam.token == token))
-    return result.scalar_one_or_none()
+
 
 
 async def get_game_teams(db: AsyncSession, game_id: uuid.UUID) -> list[GameTeam]:

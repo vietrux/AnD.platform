@@ -1,10 +1,9 @@
 import uuid
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_db, GameNotFoundError, TeamNotFoundError
-from src.schemas import ScoreboardResponse, ScoreboardEntry, DeleteResponse, MessageResponse
+from src.schemas import ScoreboardResponse, ScoreboardEntry
 from src.services import scoring_service, game_service
 
 
@@ -111,36 +110,3 @@ async def get_team_score(
         flags_lost=scoreboard.flags_lost,
     )
 
-
-@router.post("/{game_id}/recalculate", response_model=MessageResponse)
-async def recalculate_scoreboard(
-    game_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    game = await game_service.get_game(db, game_id)
-    if not game:
-        raise GameNotFoundError().to_http_exception()
-    
-    await scoring_service.recalculate_scoreboard(db, game_id)
-    
-    return MessageResponse(
-        message=f"Scoreboard recalculated for game {game.name}",
-        success=True,
-    )
-
-
-@router.delete("/{game_id}", response_model=MessageResponse)
-async def reset_scoreboard(
-    game_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    game = await game_service.get_game(db, game_id)
-    if not game:
-        raise GameNotFoundError().to_http_exception()
-    
-    await scoring_service.reset_scoreboard(db, game_id)
-    
-    return MessageResponse(
-        message=f"Scoreboard reset for game {game.name}",
-        success=True,
-    )

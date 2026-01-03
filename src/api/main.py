@@ -5,7 +5,6 @@ from src.core.database import init_db
 from src.api.routes import (
     games_router,
     checker_router,
-    submission_router,
     submissions_router,
     scoreboard_router,
     flags_router,
@@ -33,7 +32,6 @@ def create_app() -> FastAPI:
     app.include_router(vulnboxes_router)
     app.include_router(checkers_router)
     app.include_router(checker_router)
-    app.include_router(submission_router)
     app.include_router(submissions_router)
     app.include_router(scoreboard_router)
     app.include_router(flags_router)

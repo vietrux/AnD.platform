@@ -1,10 +1,9 @@
 import uuid
-from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core import get_db, get_settings
-from src.schemas import DeleteResponse, MessageResponse
+from src.core import get_db
+from src.schemas import DeleteResponse
 from src.schemas.vulnbox import (
     VulnboxCreate,
     VulnboxUpdate,
@@ -98,20 +97,3 @@ async def delete_vulnbox(
     await vulnbox_service.delete_vulnbox(db, vulnbox_id)
     return DeleteResponse(deleted_id=vulnbox_id)
 
-
-@router.post("/{vulnbox_id}/build", response_model=MessageResponse)
-async def build_vulnbox_image(
-    vulnbox_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-):
-    vulnbox = await vulnbox_service.get_vulnbox(db, vulnbox_id)
-    if not vulnbox:
-        raise HTTPException(status_code=404, detail="Vulnbox not found")
-    
-    image_tag = await docker_service.build_vulnbox_image(vulnbox_id, vulnbox.path)
-    await vulnbox_service.set_vulnbox_docker_image(db, vulnbox, image_tag)
-    
-    return MessageResponse(
-        message=f"Docker image built: {image_tag}",
-        success=True,
-    )

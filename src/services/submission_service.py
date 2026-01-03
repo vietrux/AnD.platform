@@ -20,16 +20,21 @@ ROOT_FLAG_POINTS = 150
 
 async def submit_flag(
     db: AsyncSession,
-    team_token: str,
+    game_id: uuid.UUID,
+    team_id: str,
     submitted_flag: str,
 ) -> tuple[SubmissionStatus, int, str]:
     game_team = await db.execute(
-        select(GameTeam).where(GameTeam.token == team_token, GameTeam.is_active == True)
+        select(GameTeam).where(
+            GameTeam.game_id == game_id,
+            GameTeam.team_id == team_id,
+            GameTeam.is_active == True
+        )
     )
     game_team = game_team.scalar_one_or_none()
     
     if not game_team:
-        return SubmissionStatus.INVALID, 0, "Invalid team token"
+        return SubmissionStatus.INVALID, 0, "Team not found in game"
     
     flag = await flag_service.get_flag_by_value(db, submitted_flag)
     

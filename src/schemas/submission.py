@@ -6,7 +6,8 @@ from src.models.submission import SubmissionStatus
 
 
 class FlagSubmit(BaseModel):
-    team_token: str = Field(..., min_length=1)
+    game_id: uuid.UUID = Field(..., description="Game ID for validation")
+    team_id: str = Field(..., min_length=1, description="Team identifier")
     flag: str = Field(..., min_length=1)
 
 

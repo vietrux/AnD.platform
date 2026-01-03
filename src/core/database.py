@@ -48,6 +48,13 @@ def _apply_schema_migrations(connection) -> None:
         if "max_ticks" not in columns:
             connection.execute(text("ALTER TABLE games ADD COLUMN max_ticks INTEGER DEFAULT NULL"))
             logger.info("Added max_ticks column to games table")
+    
+    # Make token column nullable in game_teams table
+    if "game_teams" in inspector.get_table_names():
+        game_teams_columns = {col["name"]: col for col in inspector.get_columns("game_teams")}
+        if "token" in game_teams_columns and not game_teams_columns["token"]["nullable"]:
+            connection.execute(text("ALTER TABLE game_teams ALTER COLUMN token DROP NOT NULL"))
+            logger.info("Made token column nullable in game_teams table")
 
 
 async def wait_for_db(timeout: float = 60.0) -> bool:

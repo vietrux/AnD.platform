@@ -489,8 +489,8 @@ export default function GameDetailPage({ params }: PageProps) {
                 <TableRow>
                   <TableHead>Team ID</TableHead>
                   <TableHead>Container</TableHead>
-                  <TableHead>IP Address</TableHead>
                   <TableHead>SSH</TableHead>
+                  <TableHead>Password</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -502,13 +502,19 @@ export default function GameDetailPage({ params }: PageProps) {
                     <TableCell className="font-mono text-xs">
                       {team.container_name || "-"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {team.container_ip || "-"}
+                    <TableCell className="text-xs">
+                      {team.ssh_port ? (
+                        <span className="font-mono">
+                          {team.ssh_username}@{team.container_ip}:{team.ssh_port}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
                     <TableCell className="text-xs">
                       {team.ssh_port ? (
                         <span className="font-mono">
-                          {team.ssh_username}@:{team.ssh_port}
+                          {team.ssh_password}
                         </span>
                       ) : (
                         "-"

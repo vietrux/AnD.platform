@@ -57,3 +57,7 @@ logs/
 *.egg-info/
 dist/
 build/
+
+# Uploads and examples
+uploads/
+examples/

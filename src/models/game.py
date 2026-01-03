@@ -60,6 +60,7 @@ class GameTeam(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id"), nullable=False)
     team_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     
     container_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     container_ip: Mapped[str | None] = mapped_column(String(50), nullable=True)

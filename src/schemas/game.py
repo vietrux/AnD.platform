@@ -9,12 +9,14 @@ class GameCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = None
     tick_duration_seconds: int = Field(default=60, ge=10, le=600)
+    max_ticks: int | None = Field(default=None, ge=1, description="Total ticks for the game. None = infinite.")
 
 
 class GameUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     tick_duration_seconds: int | None = None
+    max_ticks: int | None = None
 
 
 class GameTeamAdd(BaseModel):
@@ -36,6 +38,7 @@ class GameResponse(BaseModel):
     checker_module: str | None
     status: GameStatus
     tick_duration_seconds: int
+    max_ticks: int | None
     current_tick: int
     start_time: datetime | None
     created_at: datetime

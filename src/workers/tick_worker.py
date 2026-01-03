@@ -106,6 +106,19 @@ class TickWorker:
         await scoring_service.update_rankings(db, game.id)
         
         logger.info(f"Game {game.name}: Tick {tick_number} complete, {flags_placed} flags placed")
+        
+        await self.check_auto_stop(db, game, tick_number)
+    
+    async def check_auto_stop(self, db, game: Game, tick_number: int):
+        if game.max_ticks is not None and tick_number >= game.max_ticks:
+            logger.info(f"Game {game.name}: Reached max_ticks ({game.max_ticks}), auto-stopping")
+            
+            game_teams = await game_service.get_game_teams(db, game.id)
+            for team in game_teams:
+                if team.container_name:
+                    await docker_service.stop_team_container(team.container_name)
+            
+            await game_service.update_game_status(db, game, GameStatus.FINISHED)
 
 
 async def main():

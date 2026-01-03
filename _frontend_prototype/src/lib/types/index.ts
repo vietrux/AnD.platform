@@ -12,6 +12,7 @@ export interface Game {
   checker_module: string | null
   status: GameStatus
   tick_duration_seconds: number
+  max_ticks: number | null
   current_tick: number
   start_time: string | null
   created_at: string
@@ -21,12 +22,14 @@ export interface GameCreate {
   name: string
   description?: string | null
   tick_duration_seconds?: number
+  max_ticks?: number | null
 }
 
 export interface GameUpdate {
   name?: string | null
   description?: string | null
   tick_duration_seconds?: number | null
+  max_ticks?: number | null
 }
 
 export interface GameListResponse {

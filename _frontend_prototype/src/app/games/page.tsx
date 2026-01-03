@@ -75,6 +75,7 @@ export default function GamesPage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [tickDuration, setTickDuration] = useState(60)
+  const [maxTicks, setMaxTicks] = useState<number | null>(null)
 
   async function fetchGames() {
     try {
@@ -105,6 +106,7 @@ export default function GamesPage() {
         name,
         description: description || undefined,
         tick_duration_seconds: tickDuration,
+        max_ticks: maxTicks || undefined,
       })
       toast.success("Game created successfully")
       setIsDialogOpen(false)
@@ -178,6 +180,7 @@ export default function GamesPage() {
     setName("")
     setDescription("")
     setTickDuration(60)
+    setMaxTicks(null)
   }
 
   function formatDate(dateString: string) {
@@ -250,6 +253,20 @@ export default function GamesPage() {
                     Time between flag generation cycles (10-600 seconds)
                   </p>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxTicks">Max Ticks (optional)</Label>
+                  <Input
+                    id="maxTicks"
+                    type="number"
+                    min={1}
+                    placeholder="Leave empty for infinite"
+                    value={maxTicks ?? ""}
+                    onChange={(e) => setMaxTicks(e.target.value ? parseInt(e.target.value) : null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Game auto-stops after this many ticks. Leave empty for manual stop.
+                  </p>
+                </div>
               </div>
               <DialogFooter>
                 <DialogClose asChild>
@@ -292,6 +309,7 @@ export default function GamesPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Current Tick</TableHead>
+                  <TableHead>Max Ticks</TableHead>
                   <TableHead>Tick Duration</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -320,6 +338,9 @@ export default function GamesPage() {
                     </TableCell>
                     <TableCell className="font-mono">
                       {game.current_tick}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {game.max_ticks ?? "∞"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {game.tick_duration_seconds}s

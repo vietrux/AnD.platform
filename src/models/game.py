@@ -38,6 +38,7 @@ class Game(Base):
     )
     
     tick_duration_seconds: Mapped[int] = mapped_column(Integer, default=60)
+    max_ticks: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     current_tick: Mapped[int] = mapped_column(Integer, default=0)
     
     start_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

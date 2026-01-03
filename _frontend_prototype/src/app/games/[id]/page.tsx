@@ -292,7 +292,7 @@ export default function GameDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Current Tick</CardTitle>
@@ -301,6 +301,20 @@ export default function GameDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-2">
               <Clock className="size-4 text-muted-foreground" />
               <span className="text-2xl font-bold">{game.current_tick}</span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Max Ticks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {game.max_ticks ? (
+                <span>{game.current_tick} / {game.max_ticks}</span>
+              ) : (
+                <span className="text-muted-foreground">∞</span>
+              )}
             </div>
           </CardContent>
         </Card>

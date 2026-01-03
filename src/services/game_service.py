@@ -12,6 +12,7 @@ async def create_game(db: AsyncSession, data: GameCreate) -> Game:
         name=data.name,
         description=data.description,
         tick_duration_seconds=data.tick_duration_seconds,
+        max_ticks=data.max_ticks,
         status=GameStatus.DRAFT,
     )
     db.add(game)

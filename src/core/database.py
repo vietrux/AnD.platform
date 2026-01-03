@@ -25,6 +25,7 @@ async def init_db(max_retries: int = 30, retry_delay: float = 1.0) -> None:
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                await conn.run_sync(_apply_schema_migrations)
             logger.info("Database initialized successfully")
             db_initialized.set()
             return
@@ -35,6 +36,18 @@ async def init_db(max_retries: int = 30, retry_delay: float = 1.0) -> None:
             else:
                 logger.error(f"Failed to connect to database after {max_retries} attempts")
                 raise
+
+
+def _apply_schema_migrations(connection) -> None:
+    from sqlalchemy import text, inspect
+    
+    inspector = inspect(connection)
+    
+    if "games" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("games")]
+        if "max_ticks" not in columns:
+            connection.execute(text("ALTER TABLE games ADD COLUMN max_ticks INTEGER DEFAULT NULL"))
+            logger.info("Added max_ticks column to games table")
 
 
 async def wait_for_db(timeout: float = 60.0) -> bool:

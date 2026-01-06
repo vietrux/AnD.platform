@@ -278,12 +278,14 @@ async def remove_team(
     return DeleteResponse(deleted_id=game_team.id)
 
 
-@router.post("/{game_id}/assign-vulnbox", response_model=GameResponse)
+@router.post("/{game_id}/assign-vulnbox", response_model=GameResponse, deprecated=True)
 async def assign_vulnbox(
     game_id: uuid.UUID,
     vulnbox_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
+    """DEPRECATED: Use POST /games/{game_id}/vulnboxes instead.
+    This endpoint only sets primary vulnbox, use /vulnboxes for multi-vulnbox support."""
     from src.services import vulnbox_service
     
     game = await game_service.get_game(db, game_id)
@@ -297,16 +299,21 @@ async def assign_vulnbox(
     if not vulnbox:
         raise HTTPException(status_code=404, detail="Vulnbox not found")
     
+    # Also add to junction table for consistency
+    await game_service.add_vulnbox_to_game(db, game_id, vulnbox)
+    
     return await game_service.assign_vulnbox(db, game, vulnbox)
 
 
-@router.post("/{game_id}/add-vulnbox")
-async def add_vulnbox_to_game(
+# ==================== VULNBOXES (Many-to-Many) ====================
+
+@router.post("/{game_id}/vulnboxes")
+async def add_vulnbox(
     game_id: uuid.UUID,
     vulnbox_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Add a vulnbox to the game (supports multiple vulnboxes per game)."""
+    """Add a vulnbox to the game. Games can have multiple vulnboxes (services)."""
     from src.services import vulnbox_service
     
     game = await game_service.get_game(db, game_id)
@@ -314,7 +321,7 @@ async def add_vulnbox_to_game(
         raise HTTPException(status_code=404, detail="Game not found")
     
     if game.status != GameStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Can only add vulnboxes in draft state")
+        raise HTTPException(status_code=400, detail="Can only modify vulnboxes in draft state")
     
     vulnbox = await vulnbox_service.get_vulnbox(db, vulnbox_id)
     if not vulnbox:
@@ -323,14 +330,14 @@ async def add_vulnbox_to_game(
     game_vulnbox = await game_service.add_vulnbox_to_game(db, game_id, vulnbox)
     return {
         "message": "Vulnbox added to game",
-        "game_vulnbox_id": str(game_vulnbox.id),
+        "id": str(game_vulnbox.id),
         "game_id": str(game_id),
         "vulnbox_id": str(vulnbox_id),
     }
 
 
 @router.get("/{game_id}/vulnboxes")
-async def list_game_vulnboxes(
+async def list_vulnboxes(
     game_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
@@ -351,7 +358,7 @@ async def list_game_vulnboxes(
 
 
 @router.delete("/{game_id}/vulnboxes/{vulnbox_id}")
-async def remove_vulnbox_from_game(
+async def remove_vulnbox(
     game_id: uuid.UUID,
     vulnbox_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
@@ -362,7 +369,7 @@ async def remove_vulnbox_from_game(
         raise HTTPException(status_code=404, detail="Game not found")
     
     if game.status != GameStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Can only remove vulnboxes in draft state")
+        raise HTTPException(status_code=400, detail="Can only modify vulnboxes in draft state")
     
     success = await game_service.remove_vulnbox_from_game(db, game_id, vulnbox_id)
     if not success:
@@ -371,12 +378,80 @@ async def remove_vulnbox_from_game(
     return {"message": "Vulnbox removed from game"}
 
 
-@router.post("/{game_id}/assign-checker", response_model=GameResponse)
+# ==================== CHECKER (One-to-One) ====================
+
+@router.put("/{game_id}/checker", response_model=GameResponse)
+async def set_checker(
+    game_id: uuid.UUID,
+    checker_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Set the checker for this game. Only one checker per game."""
+    from src.services import checker_crud_service
+    
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Can only set checker in draft state")
+    
+    checker = await checker_crud_service.get_checker(db, checker_id)
+    if not checker:
+        raise HTTPException(status_code=404, detail="Checker not found")
+    
+    return await game_service.assign_checker(db, game, checker)
+
+
+@router.get("/{game_id}/checker")
+async def get_checker(
+    game_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the checker assigned to this game."""
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if not game.checker_id:
+        return {"game_id": str(game_id), "checker": None}
+    
+    return {
+        "game_id": str(game_id),
+        "checker": {
+            "id": str(game.checker_id),
+            "module": game.checker_module,
+        }
+    }
+
+
+@router.delete("/{game_id}/checker", response_model=GameResponse)
+async def remove_checker(
+    game_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove the checker from this game."""
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Can only modify checker in draft state")
+    
+    game.checker_id = None
+    game.checker_module = None
+    await db.commit()
+    await db.refresh(game)
+    return game
+
+
+@router.post("/{game_id}/assign-checker", response_model=GameResponse, deprecated=True)
 async def assign_checker(
     game_id: uuid.UUID,
     checker_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
+    """DEPRECATED: Use PUT /games/{game_id}/checker instead."""
     from src.services import checker_crud_service
     
     game = await game_service.get_game(db, game_id)

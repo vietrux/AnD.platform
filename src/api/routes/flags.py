@@ -22,7 +22,11 @@ class FlagStats(BaseModel):
     total_flags: int
     stolen_flags: int
     not_stolen_flags: int
-    total_steals: int
+    total_steals: int  # Total times flags were stolen (sum of stolen_count)
+    # Attack stats (when team_id is specified)
+    flags_captured: int = 0  # Flags this team successfully submitted
+    # Defense stats (when team_id is specified)  
+    flags_lost: int = 0  # This team's flags that were stolen
 
 
 @router.get("", response_model=FlagListResponse)

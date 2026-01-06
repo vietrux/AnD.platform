@@ -97,3 +97,15 @@ async def get_scoreboard(db: AsyncSession, game_id: uuid.UUID) -> list[Scoreboar
         .order_by(Scoreboard.rank.asc())
     )
     return list(result.scalars().all())
+
+
+async def get_team_scoreboard(db: AsyncSession, game_id: uuid.UUID, team_id: str) -> Scoreboard | None:
+    """Get scoreboard entry for a specific team in a game."""
+    result = await db.execute(
+        select(Scoreboard).where(
+            Scoreboard.game_id == game_id,
+            Scoreboard.team_id == team_id,
+        )
+    )
+    return result.scalar_one_or_none()
+

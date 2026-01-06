@@ -1,6 +1,6 @@
 from src.models.vulnbox import Vulnbox
 from src.models.checker import Checker
-from src.models.game import Game, GameTeam, GameStatus
+from src.models.game import Game, GameTeam, GameStatus, GameVulnbox
 from src.models.tick import Tick, TickStatus
 from src.models.flag import Flag, FlagType
 from src.models.submission import FlagSubmission, SubmissionStatus
@@ -13,6 +13,7 @@ __all__ = [
     "Game",
     "GameTeam",
     "GameStatus",
+    "GameVulnbox",
     "Tick",
     "TickStatus",
     "Flag",

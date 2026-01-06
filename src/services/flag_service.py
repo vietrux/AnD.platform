@@ -165,6 +165,8 @@ async def get_flag_stats(
     game_id: uuid.UUID,
     team_id: str | None = None,
 ) -> dict:
+    from src.models import FlagSubmission, SubmissionStatus
+    
     # Total flags
     total_query = select(func.count()).select_from(Flag).where(Flag.game_id == game_id)
     if team_id:
@@ -189,9 +191,29 @@ async def get_flag_stats(
     steals_result = await db.execute(steals_query)
     total_steals = steals_result.scalar() or 0
     
+    # Attack stats: flags captured by this team (from submissions)
+    flags_captured = 0
+    flags_lost = 0
+    
+    if team_id:
+        # Flags this team successfully captured
+        captured_query = select(func.count()).select_from(FlagSubmission).where(
+            FlagSubmission.game_id == game_id,
+            FlagSubmission.attacker_team_id == team_id,
+            FlagSubmission.status == SubmissionStatus.ACCEPTED,
+        )
+        captured_result = await db.execute(captured_query)
+        flags_captured = captured_result.scalar() or 0
+        
+        # Defense stats: this team's flags that were stolen (already computed above)
+        flags_lost = stolen_flags
+    
     return {
         "total_flags": total_flags,
         "stolen_flags": stolen_flags,
         "not_stolen_flags": total_flags - stolen_flags,
         "total_steals": total_steals,
+        "flags_captured": flags_captured,
+        "flags_lost": flags_lost,
     }
+

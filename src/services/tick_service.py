@@ -54,13 +54,10 @@ class TickService(BaseService[Tick, TickCreate, TickUpdate]):
         db: AsyncSession,
         game_id: uuid.UUID,
     ) -> Tick | None:
-        """Get current active tick."""
+        """Get current tick (latest tick for the game)."""
         result = await db.execute(
             select(Tick)
-            .where(
-                Tick.game_id == game_id,
-                Tick.status == TickStatus.ACTIVE,
-            )
+            .where(Tick.game_id == game_id)
             .order_by(Tick.tick_number.desc())
             .limit(1)
         )

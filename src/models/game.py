@@ -77,3 +77,24 @@ class GameTeam(Base):
     __table_args__ = (
         Index("ix_game_teams_game_team", "game_id", "team_id", unique=True),
     )
+
+
+class GameVulnbox(Base):
+    """Junction table for many-to-many relationship between Game and Vulnbox.
+    Allows a game to have multiple vulnboxes (services)."""
+    __tablename__ = "game_vulnboxes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
+    vulnbox_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("vulnboxes.id", ondelete="CASCADE"), nullable=False)
+    
+    # Optional: override paths per game if needed
+    vulnbox_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    docker_image: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("ix_game_vulnboxes_game_vulnbox", "game_id", "vulnbox_id", unique=True),
+    )
+

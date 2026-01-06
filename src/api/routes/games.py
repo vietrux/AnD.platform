@@ -126,7 +126,14 @@ async def start_game(
     
     await game_service.update_game_status(db, game, GameStatus.DEPLOYING)
     
-    image_tag = await docker_service.build_vulnbox_image(game_id, game.vulnbox_path)
+    try:
+        image_tag = await docker_service.build_vulnbox_image(game_id, game.vulnbox_path)
+    except Exception as e:
+        await game_service.update_game_status(db, game, GameStatus.DRAFT)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to build vulnbox image: {str(e)}. Please check Docker and try again."
+        )
     
     settings = get_settings()
     team_credentials = []
@@ -135,9 +142,22 @@ async def start_game(
         ssh_port = settings.ssh_port_base + idx + 1
         ssh_username, ssh_password = docker_service.generate_ssh_credentials()
         
-        container_name, container_ip = await docker_service.deploy_team_container(
-            game_id, team.team_id, image_tag, ssh_port, ssh_username, ssh_password
-        )
+        try:
+            container_name, container_ip = await docker_service.deploy_team_container(
+                game_id, team.team_id, image_tag, ssh_port, ssh_username, ssh_password
+            )
+        except Exception as e:
+            # Cleanup already deployed containers
+            for cred in team_credentials:
+                try:
+                    await docker_service.stop_team_container(f"adg-{game_id}-{cred['team_id']}")
+                except Exception:
+                    pass
+            await game_service.update_game_status(db, game, GameStatus.DRAFT)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to deploy container for team {team.team_id}: {str(e)}"
+            )
         
         await game_service.update_game_team_container(
             db, team, container_name, container_ip, ssh_username, ssh_password, ssh_port
@@ -159,6 +179,7 @@ async def start_game(
         "teams_deployed": len(teams),
         "teams": team_credentials,
     }
+
 
 
 @router.post("/{game_id}/pause")
@@ -279,6 +300,77 @@ async def assign_vulnbox(
     return await game_service.assign_vulnbox(db, game, vulnbox)
 
 
+@router.post("/{game_id}/add-vulnbox")
+async def add_vulnbox_to_game(
+    game_id: uuid.UUID,
+    vulnbox_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a vulnbox to the game (supports multiple vulnboxes per game)."""
+    from src.services import vulnbox_service
+    
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Can only add vulnboxes in draft state")
+    
+    vulnbox = await vulnbox_service.get_vulnbox(db, vulnbox_id)
+    if not vulnbox:
+        raise HTTPException(status_code=404, detail="Vulnbox not found")
+    
+    game_vulnbox = await game_service.add_vulnbox_to_game(db, game_id, vulnbox)
+    return {
+        "message": "Vulnbox added to game",
+        "game_vulnbox_id": str(game_vulnbox.id),
+        "game_id": str(game_id),
+        "vulnbox_id": str(vulnbox_id),
+    }
+
+
+@router.get("/{game_id}/vulnboxes")
+async def list_game_vulnboxes(
+    game_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """List all vulnboxes assigned to a game."""
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    vulnboxes = await game_service.get_game_vulnboxes(db, game_id)
+    return {
+        "game_id": str(game_id),
+        "vulnboxes": [
+            {"id": str(gv.vulnbox_id), "vulnbox_path": gv.vulnbox_path}
+            for gv in vulnboxes
+        ],
+        "count": len(vulnboxes),
+    }
+
+
+@router.delete("/{game_id}/vulnboxes/{vulnbox_id}")
+async def remove_vulnbox_from_game(
+    game_id: uuid.UUID,
+    vulnbox_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a vulnbox from the game."""
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Can only remove vulnboxes in draft state")
+    
+    success = await game_service.remove_vulnbox_from_game(db, game_id, vulnbox_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Vulnbox not assigned to this game")
+    
+    return {"message": "Vulnbox removed from game"}
+
+
 @router.post("/{game_id}/assign-checker", response_model=GameResponse)
 async def assign_checker(
     game_id: uuid.UUID,
@@ -299,4 +391,3 @@ async def assign_checker(
         raise HTTPException(status_code=404, detail="Checker not found")
     
     return await game_service.assign_checker(db, game, checker)
-

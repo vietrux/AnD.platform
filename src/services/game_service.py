@@ -152,9 +152,22 @@ async def update_game_team(
 async def delete_game_team(
     db: AsyncSession, game_id: uuid.UUID, team_id: str
 ) -> bool:
+    """Delete a team from a game (hard delete) and its associated scoreboard entry."""
     game_team = await get_game_team(db, game_id, team_id)
     if game_team:
-        game_team.is_active = False
+        # Delete associated scoreboard entry
+        result = await db.execute(
+            select(Scoreboard).where(
+                Scoreboard.game_id == game_id,
+                Scoreboard.team_id == team_id,
+            )
+        )
+        scoreboard = result.scalar_one_or_none()
+        if scoreboard:
+            await db.delete(scoreboard)
+        
+        # Hard delete the team
+        await db.delete(game_team)
         await db.commit()
         return True
     return False
@@ -176,3 +189,63 @@ async def assign_checker(db: AsyncSession, game: Game, checker) -> Game:
     return game
 
 
+async def add_vulnbox_to_game(db: AsyncSession, game_id: uuid.UUID, vulnbox) -> "GameVulnbox":
+    """Add a vulnbox to a game using the junction table."""
+    from src.models import GameVulnbox
+    
+    # Check if already exists
+    existing = await db.execute(
+        select(GameVulnbox).where(
+            GameVulnbox.game_id == game_id,
+            GameVulnbox.vulnbox_id == vulnbox.id,
+        )
+    )
+    existing_gv = existing.scalar_one_or_none()
+    if existing_gv:
+        return existing_gv
+    
+    game_vulnbox = GameVulnbox(
+        game_id=game_id,
+        vulnbox_id=vulnbox.id,
+        vulnbox_path=vulnbox.path,
+    )
+    db.add(game_vulnbox)
+    
+    # Also update the game's primary vulnbox if not set
+    game = await get_game(db, game_id)
+    if game and not game.vulnbox_id:
+        game.vulnbox_id = vulnbox.id
+        game.vulnbox_path = vulnbox.path
+    
+    await db.commit()
+    await db.refresh(game_vulnbox)
+    return game_vulnbox
+
+
+async def get_game_vulnboxes(db: AsyncSession, game_id: uuid.UUID) -> list["GameVulnbox"]:
+    """Get all vulnboxes assigned to a game."""
+    from src.models import GameVulnbox
+    
+    result = await db.execute(
+        select(GameVulnbox).where(GameVulnbox.game_id == game_id)
+    )
+    return list(result.scalars().all())
+
+
+async def remove_vulnbox_from_game(db: AsyncSession, game_id: uuid.UUID, vulnbox_id: uuid.UUID) -> bool:
+    """Remove a vulnbox from a game."""
+    from src.models import GameVulnbox
+    
+    result = await db.execute(
+        select(GameVulnbox).where(
+            GameVulnbox.game_id == game_id,
+            GameVulnbox.vulnbox_id == vulnbox_id,
+        )
+    )
+    game_vulnbox = result.scalar_one_or_none()
+    
+    if game_vulnbox:
+        await db.delete(game_vulnbox)
+        await db.commit()
+        return True
+    return False

@@ -37,13 +37,7 @@ SSH_HOST=localhost
 SSH_PORT_BASE=2200
 ```
 
-### 3. Run Migrations
-
-```bash
-uv run alembic upgrade head
-```
-
-### 4. Start Server
+### 3. Start Server
 
 ```bash
 # Start API + Workers (single process)
@@ -250,9 +244,6 @@ src/
 ```bash
 # Check database
 docker compose ps
-
-# Reset migrations
-uv run alembic downgrade base && uv run alembic upgrade head
 
 # Verify imports
 uv run python -c "from src.api.main import app; print(f'{len(app.routes)} routes')"

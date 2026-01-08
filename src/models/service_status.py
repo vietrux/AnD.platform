@@ -22,7 +22,7 @@ class ServiceStatus(Base):
     team_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     tick_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ticks.id"), nullable=False)
     
-    status: Mapped[CheckStatus] = mapped_column(Enum(CheckStatus), default=CheckStatus.UP)
+    status: Mapped[CheckStatus] = mapped_column(Enum(CheckStatus, native_enum=False), default=CheckStatus.UP)
     sla_percentage: Mapped[float] = mapped_column(Float, default=100.0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     

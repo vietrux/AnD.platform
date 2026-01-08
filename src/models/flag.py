@@ -21,7 +21,7 @@ class Flag(Base):
     team_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     tick_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ticks.id"), nullable=False)
     
-    flag_type: Mapped[FlagType] = mapped_column(Enum(FlagType), default=FlagType.USER)
+    flag_type: Mapped[FlagType] = mapped_column(Enum(FlagType, native_enum=False), default=FlagType.USER)
     flag_value: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
     
     valid_until: Mapped[datetime] = mapped_column(DateTime, nullable=False)

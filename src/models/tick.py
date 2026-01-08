@@ -22,7 +22,7 @@ class Tick(Base):
     game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id"), nullable=False)
     
     tick_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[TickStatus] = mapped_column(Enum(TickStatus), default=TickStatus.PENDING)
+    status: Mapped[TickStatus] = mapped_column(Enum(TickStatus, native_enum=False), default=TickStatus.PENDING)
     
     start_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

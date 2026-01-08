@@ -34,7 +34,7 @@ class Game(Base):
     checker_module: Mapped[str | None] = mapped_column(String(200), nullable=True)
     
     status: Mapped[GameStatus] = mapped_column(
-        Enum(GameStatus), default=GameStatus.DRAFT, nullable=False
+        Enum(GameStatus, native_enum=False), default=GameStatus.DRAFT, nullable=False
     )
     
     tick_duration_seconds: Mapped[int] = mapped_column(Integer, default=60)

@@ -26,7 +26,7 @@ class FlagSubmission(Base):
     flag_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("flags.id"), nullable=True)
     
     submitted_flag: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
-    status: Mapped[SubmissionStatus] = mapped_column(Enum(SubmissionStatus), nullable=False)
+    status: Mapped[SubmissionStatus] = mapped_column(Enum(SubmissionStatus, native_enum=False), nullable=False)
     points: Mapped[int] = mapped_column(Integer, default=0)
     
     submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

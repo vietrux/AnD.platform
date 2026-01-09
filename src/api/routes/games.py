@@ -16,6 +16,7 @@ from src.schemas import (
     DeleteResponse,
 )
 from src.services import game_service, docker_service
+from src.services import port_service
 
 router = APIRouter(prefix="/games", tags=["games"])
 
@@ -86,6 +87,13 @@ async def add_team(
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     
+    # Only allow team changes in DRAFT status
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot add teams: game must be in draft status"
+        )
+    
     game_team = await game_service.add_team_to_game(db, game_id, data.team_id)
     return game_team
 
@@ -124,6 +132,16 @@ async def start_game(
     if not teams:
         raise HTTPException(status_code=400, detail="No teams in game")
     
+    # CRITICAL: Check if any team is already in another running game
+    for team in teams:
+        conflicting_games = await game_service.get_running_games_for_team(db, team.team_id)
+        conflicting = [g for g in conflicting_games if g.id != game_id]
+        if conflicting:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"Team {team.team_id} is already in running game: {conflicting[0].name}"
+            )
+    
     await game_service.update_game_status(db, game, GameStatus.DEPLOYING)
     
     try:
@@ -135,11 +153,25 @@ async def start_game(
             detail=f"Failed to build vulnbox image: {str(e)}. Please check Docker and try again."
         )
     
+    # Check for port conflicts with other running games
+    port_conflicts = await port_service.check_port_conflicts(db, game_id, len(teams))
+    if port_conflicts:
+        await game_service.update_game_status(db, game, GameStatus.DRAFT)
+        conflict_details = ", ".join(
+            f"port {c['port']} (used by game {c['used_by_game'][:8]}...)"
+            for c in port_conflicts[:3]
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=f"Port conflict with running games: {conflict_details}. "
+                   f"Please stop conflicting games or wait for more ports to be available."
+        )
+    
     settings = get_settings()
     team_credentials = []
     
     for idx, team in enumerate(teams):
-        ssh_port = settings.ssh_port_base + idx + 1
+        ssh_port = await port_service.get_port_for_team(db, game_id, idx)
         ssh_username, ssh_password = docker_service.generate_ssh_credentials()
         
         try:
@@ -312,6 +344,13 @@ async def remove_team(
     game = await game_service.get_game(db, game_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
+    
+    # Only allow team changes in DRAFT status
+    if game.status != GameStatus.DRAFT:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot remove teams: game must be in draft status"
+        )
     
     game_team = await game_service.get_game_team(db, game_id, team_id)
     if not game_team:
@@ -512,3 +551,16 @@ async def assign_checker(
         raise HTTPException(status_code=404, detail="Checker not found")
     
     return await game_service.assign_checker(db, game, checker)
+
+
+# ==================== PORT ALLOCATION (Admin/Debug) ====================
+
+@router.get("/admin/ports")
+async def get_port_allocation_status(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get port allocation status across all active games.
+    
+    Useful for debugging port conflicts and monitoring resource usage.
+    """
+    return await port_service.get_available_ports_summary(db)

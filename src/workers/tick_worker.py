@@ -50,24 +50,39 @@ class TickWorker:
                 await self.process_game_tick(db, game)
     
     async def process_game_tick(self, db, game: Game):
-        """Process tick for a running game, accounting for paused time."""
+        """Process tick for a running game using sequential tick progression.
+        
+        This approach tracks when each tick started, making pause/resume work correctly.
+        Ticks only advance when tick_duration_seconds has passed since the current tick started.
+        """
         now = datetime.utcnow()
         
         if game.start_time is None:
             return
         
-        # Calculate total elapsed time since game start
-        total_elapsed = (now - game.start_time).total_seconds()
+        # First tick: start immediately
+        if game.current_tick == 0:
+            await self.execute_tick(db, game, 1)
+            return
         
-        # Subtract time spent paused to get effective game time
-        total_paused = game.total_paused_seconds or 0.0
-        effective_elapsed = total_elapsed - total_paused
-        
-        # Calculate expected tick based on effective elapsed time
-        expected_tick = int(effective_elapsed / game.tick_duration_seconds) + 1
-        
-        if expected_tick > game.current_tick:
-            await self.execute_tick(db, game, expected_tick)
+        # Sequential tick progression using current_tick_started_at
+        if game.current_tick_started_at is not None:
+            elapsed_since_tick = (now - game.current_tick_started_at).total_seconds()
+            
+            if elapsed_since_tick >= game.tick_duration_seconds:
+                # Time for next tick
+                next_tick = game.current_tick + 1
+                await self.execute_tick(db, game, next_tick)
+        else:
+            # Legacy fallback for games started before this fix:
+            # Use old time-based calculation
+            total_elapsed = (now - game.start_time).total_seconds()
+            total_paused = game.total_paused_seconds or 0.0
+            effective_elapsed = total_elapsed - total_paused
+            expected_tick = int(effective_elapsed / game.tick_duration_seconds) + 1
+            
+            if expected_tick > game.current_tick:
+                await self.execute_tick(db, game, expected_tick)
     
     async def execute_tick(self, db, game: Game, tick_number: int):
         # Check if tick already exists for this game/tick_number
@@ -118,7 +133,9 @@ class TickWorker:
         tick.status = TickStatus.COMPLETED
         tick.end_time = datetime.utcnow()
         
+        # Update game state
         game.current_tick = tick_number
+        game.current_tick_started_at = datetime.utcnow()  # Track when this tick started
         
         await db.commit()
         

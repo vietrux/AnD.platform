@@ -4,6 +4,7 @@ from src.services import submission_service
 from src.services import scoring_service
 from src.services import docker_service
 from src.services import tick_service
+from src.services import port_service
 
 __all__ = [
     "game_service",
@@ -12,4 +13,5 @@ __all__ = [
     "scoring_service",
     "docker_service",
     "tick_service",
+    "port_service",
 ]

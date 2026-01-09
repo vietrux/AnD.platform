@@ -19,7 +19,7 @@ class Tick(Base):
     __tablename__ = "ticks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id"), nullable=False)
+    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     
     tick_number: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[TickStatus] = mapped_column(Enum(TickStatus, native_enum=False), default=TickStatus.PENDING)

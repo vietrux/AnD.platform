@@ -17,7 +17,7 @@ class Flag(Base):
     __tablename__ = "flags"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id"), nullable=False)
+    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     team_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     tick_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ticks.id"), nullable=False)
     

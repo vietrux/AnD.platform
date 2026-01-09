@@ -48,6 +48,9 @@ class Game(Base):
     paused_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     total_paused_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     
+    # Track when current tick started for sequential tick progression
+    current_tick_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     vulnbox: Mapped["Vulnbox | None"] = relationship("Vulnbox", foreign_keys=[vulnbox_id])
@@ -64,7 +67,7 @@ class GameTeam(Base):
     __tablename__ = "game_teams"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id"), nullable=False)
+    game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     team_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     

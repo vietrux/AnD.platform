@@ -46,17 +46,29 @@ async def update_game(db: AsyncSession, game: Game, data: GameUpdate) -> Game:
 
 
 async def update_game_status(db: AsyncSession, game: Game, status: GameStatus) -> Game:
-    """Update game status with proper pause time tracking."""
+    """Update game status with proper pause time tracking.
+    
+    When resuming from pause, adjusts current_tick_started_at to maintain
+    proper tick timing (ticks continue from where they left off).
+    """
+    from datetime import timedelta
     now = datetime.utcnow()
     
     if status == GameStatus.RUNNING:
         if game.start_time is None:
             # First time starting
             game.start_time = now
+            game.current_tick_started_at = now
         elif game.status == GameStatus.PAUSED and game.paused_at:
             # Resuming from pause: accumulate paused duration
             paused_duration = (now - game.paused_at).total_seconds()
             game.total_paused_seconds = (game.total_paused_seconds or 0.0) + paused_duration
+            
+            # Adjust tick start time - shift forward by paused duration
+            # This ensures the tick timer continues from where it was paused
+            if game.current_tick_started_at:
+                game.current_tick_started_at = game.current_tick_started_at + timedelta(seconds=paused_duration)
+            
             game.paused_at = None
             
     elif status == GameStatus.PAUSED:
@@ -106,7 +118,21 @@ async def add_team_to_game(db: AsyncSession, game_id: uuid.UUID, team_id: str) -
     return game_team
 
 
-
+async def get_running_games_for_team(db: AsyncSession, team_id: str) -> list[Game]:
+    """Get all running/deploying games that a team is currently in.
+    
+    Used to prevent a team from being in multiple active games simultaneously.
+    """
+    result = await db.execute(
+        select(Game)
+        .join(GameTeam, Game.id == GameTeam.game_id)
+        .where(
+            GameTeam.team_id == team_id,
+            GameTeam.is_active == True,
+            Game.status.in_([GameStatus.RUNNING, GameStatus.DEPLOYING])
+        )
+    )
+    return list(result.scalars().all())
 
 
 async def get_game_teams(db: AsyncSession, game_id: uuid.UUID) -> list[GameTeam]:

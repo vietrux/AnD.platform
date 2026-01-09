@@ -35,7 +35,9 @@ async def create_flag(
     team_id: str,
     tick: Tick,
     flag_type: FlagType,
+    game_tick_duration: int,  # Game-specific tick duration
 ) -> Flag:
+    """Create a flag with game-specific validity period."""
     # Check if flag already exists for this game/team/tick/type
     existing = await db.execute(
         select(Flag).where(
@@ -52,7 +54,9 @@ async def create_flag(
     settings = get_settings()
     
     flag_value = generate_flag_value(game_id, team_id, tick.tick_number, flag_type)
-    validity_seconds = settings.tick_duration_seconds * settings.flag_validity_ticks
+    
+    # Use game-specific tick duration for validity calculation
+    validity_seconds = game_tick_duration * settings.flag_validity_ticks
     valid_until = datetime.utcnow() + timedelta(seconds=validity_seconds)
     
     flag = Flag(

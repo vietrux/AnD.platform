@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_db, get_settings, CannotDeleteRunningGameError, TeamNotFoundError
@@ -216,6 +216,52 @@ async def stop_game(
     return {"message": "Game stopped", "containers_removed": len(teams)}
 
 
+@router.post("/{game_id}/force-stop")
+async def force_stop_game(
+    game_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Force stop a game (including DEPLOYING state). Cleans up containers and images, resets to DRAFT."""
+    game = await game_service.get_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game.status == GameStatus.DRAFT:
+        raise HTTPException(status_code=400, detail="Game is already in draft state")
+    
+    if game.status == GameStatus.FINISHED:
+        raise HTTPException(status_code=400, detail="Game is already finished")
+    
+    # Stop all team containers
+    containers_stopped = 0
+    teams = await game_service.get_game_teams(db, game_id)
+    for team in teams:
+        if team.container_name:
+            try:
+                await docker_service.stop_team_container(team.container_name)
+                containers_stopped += 1
+            except Exception:
+                pass  # Continue even if container stop fails
+            
+            # Clear container info from team record
+            await game_service.update_game_team_container(
+                db, team, None, None, None, None, None
+            )
+    
+    # Remove the vulnbox image
+    image_removed = await docker_service.remove_vulnbox_image(game_id)
+    
+    # Reset game status to DRAFT so it can be reconfigured
+    await game_service.update_game_status(db, game, GameStatus.DRAFT)
+    
+    return {
+        "message": "Game force stopped and reset to draft",
+        "containers_stopped": containers_stopped,
+        "image_removed": image_removed,
+        "new_status": "draft",
+    }
+
+
 @router.delete("/{game_id}", response_model=DeleteResponse)
 async def delete_game(
     game_id: uuid.UUID,
@@ -281,7 +327,7 @@ async def remove_team(
 @router.post("/{game_id}/assign-vulnbox", response_model=GameResponse, deprecated=True)
 async def assign_vulnbox(
     game_id: uuid.UUID,
-    vulnbox_id: uuid.UUID,
+    vulnbox_id: uuid.UUID = Query(..., description="Vulnbox UUID to assign"),
     db: AsyncSession = Depends(get_db),
 ):
     """DEPRECATED: Use POST /games/{game_id}/vulnboxes instead.
@@ -448,7 +494,7 @@ async def remove_checker(
 @router.post("/{game_id}/assign-checker", response_model=GameResponse, deprecated=True)
 async def assign_checker(
     game_id: uuid.UUID,
-    checker_id: uuid.UUID,
+    checker_id: uuid.UUID = Query(..., description="Checker UUID to assign"),
     db: AsyncSession = Depends(get_db),
 ):
     """DEPRECATED: Use PUT /games/{game_id}/checker instead."""

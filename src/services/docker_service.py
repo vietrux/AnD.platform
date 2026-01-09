@@ -147,3 +147,20 @@ async def inject_flag_to_container(
             return False
     
     return await asyncio.to_thread(_inject)
+
+
+async def remove_vulnbox_image(game_id: uuid.UUID) -> bool:
+    """Remove the vulnbox docker image for a game (cleanup on force-stop)."""
+    image_tag = f"adg-vulnbox-{game_id}"
+    
+    def _remove():
+        client = get_docker_client()
+        try:
+            client.images.remove(image_tag, force=True)
+            return True
+        except docker.errors.ImageNotFound:
+            return False
+        except DockerException:
+            return False
+    
+    return await asyncio.to_thread(_remove)

@@ -43,6 +43,11 @@ class Game(Base):
     
     start_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
+    # Pause tracking for proper tick calculation
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    total_paused_seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     vulnbox: Mapped["Vulnbox | None"] = relationship("Vulnbox", foreign_keys=[vulnbox_id])
@@ -50,6 +55,7 @@ class Game(Base):
     game_teams: Mapped[list["GameTeam"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     ticks: Mapped[list["Tick"]] = relationship(back_populates="game", cascade="all, delete-orphan")
     flags: Mapped[list["Flag"]] = relationship(back_populates="game", cascade="all, delete-orphan")
+    scoreboard_entries: Mapped[list["Scoreboard"]] = relationship(back_populates="game", cascade="all, delete-orphan")
 
 
 

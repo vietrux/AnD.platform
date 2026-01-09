@@ -46,11 +46,29 @@ async def update_game(db: AsyncSession, game: Game, data: GameUpdate) -> Game:
 
 
 async def update_game_status(db: AsyncSession, game: Game, status: GameStatus) -> Game:
-    game.status = status
-    if status == GameStatus.RUNNING and game.start_time is None:
-        game.start_time = datetime.utcnow()
+    """Update game status with proper pause time tracking."""
+    now = datetime.utcnow()
+    
+    if status == GameStatus.RUNNING:
+        if game.start_time is None:
+            # First time starting
+            game.start_time = now
+        elif game.status == GameStatus.PAUSED and game.paused_at:
+            # Resuming from pause: accumulate paused duration
+            paused_duration = (now - game.paused_at).total_seconds()
+            game.total_paused_seconds = (game.total_paused_seconds or 0.0) + paused_duration
+            game.paused_at = None
+            
+    elif status == GameStatus.PAUSED:
+        # Record when game was paused
+        game.paused_at = now
+        
     elif status == GameStatus.FINISHED:
-        game.end_time = datetime.utcnow()
+        game.end_time = now
+        # Clear pause tracking
+        game.paused_at = None
+    
+    game.status = status
     await db.commit()
     await db.refresh(game)
     return game

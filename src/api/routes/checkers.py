@@ -110,7 +110,11 @@ async def delete_checker(
     if not checker:
         raise HTTPException(status_code=404, detail="Checker not found")
     
-    await checker_crud_service.delete_checker(db, checker_id)
+    try:
+        await checker_crud_service.delete_checker(db, checker_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
     return DeleteResponse(deleted_id=checker_id)
 
 

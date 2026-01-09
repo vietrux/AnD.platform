@@ -65,8 +65,17 @@ async def update_checker(
 
 
 async def delete_checker(db: AsyncSession, checker_id: uuid.UUID) -> bool:
+    from src.models import Game
+    
     checker = await get_checker(db, checker_id)
     if checker:
+        # Check if any games use this checker
+        result = await db.execute(
+            select(Game).where(Game.checker_id == checker_id).limit(1)
+        )
+        if result.scalar_one_or_none():
+            raise ValueError("Cannot delete checker: it is in use by one or more games")
+        
         await db.delete(checker)
         await db.commit()
         return True

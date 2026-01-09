@@ -50,13 +50,21 @@ class TickWorker:
                 await self.process_game_tick(db, game)
     
     async def process_game_tick(self, db, game: Game):
+        """Process tick for a running game, accounting for paused time."""
         now = datetime.utcnow()
         
         if game.start_time is None:
             return
         
-        elapsed = (now - game.start_time).total_seconds()
-        expected_tick = int(elapsed / game.tick_duration_seconds) + 1
+        # Calculate total elapsed time since game start
+        total_elapsed = (now - game.start_time).total_seconds()
+        
+        # Subtract time spent paused to get effective game time
+        total_paused = game.total_paused_seconds or 0.0
+        effective_elapsed = total_elapsed - total_paused
+        
+        # Calculate expected tick based on effective elapsed time
+        expected_tick = int(effective_elapsed / game.tick_duration_seconds) + 1
         
         if expected_tick > game.current_tick:
             await self.execute_tick(db, game, expected_tick)
@@ -90,10 +98,10 @@ class TickWorker:
         
         for team in game_teams:
             user_flag = await flag_service.create_flag(
-                db, game.id, team.team_id, tick, FlagType.USER
+                db, game.id, team.team_id, tick, FlagType.USER, game.tick_duration_seconds
             )
             root_flag = await flag_service.create_flag(
-                db, game.id, team.team_id, tick, FlagType.ROOT
+                db, game.id, team.team_id, tick, FlagType.ROOT, game.tick_duration_seconds
             )
             
             if team.container_name:

@@ -74,9 +74,19 @@ async def set_vulnbox_docker_image(
 
 
 async def delete_vulnbox(db: AsyncSession, vulnbox_id: uuid.UUID) -> bool:
+    from src.models import Game
+    
     vulnbox = await get_vulnbox(db, vulnbox_id)
     if vulnbox:
+        # Check if any games use this vulnbox
+        result = await db.execute(
+            select(Game).where(Game.vulnbox_id == vulnbox_id).limit(1)
+        )
+        if result.scalar_one_or_none():
+            raise ValueError("Cannot delete vulnbox: it is in use by one or more games")
+        
         await db.delete(vulnbox)
         await db.commit()
         return True
     return False
+

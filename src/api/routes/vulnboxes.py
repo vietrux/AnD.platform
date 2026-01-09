@@ -94,6 +94,10 @@ async def delete_vulnbox(
     if not vulnbox:
         raise HTTPException(status_code=404, detail="Vulnbox not found")
     
-    await vulnbox_service.delete_vulnbox(db, vulnbox_id)
+    try:
+        await vulnbox_service.delete_vulnbox(db, vulnbox_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
     return DeleteResponse(deleted_id=vulnbox_id)
 

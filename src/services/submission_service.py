@@ -11,11 +11,22 @@ from src.models import (
     Scoreboard,
     FlagType,
 )
-from src.services import flag_service
+from src.services import flag_service, scoring_service
 
 
-USER_FLAG_POINTS = 50
-ROOT_FLAG_POINTS = 150
+# =============================================================================
+# SCORING CONSTANTS
+# =============================================================================
+
+# Base points for flag types (before dynamic decay)
+BASE_USER_FLAG_POINTS = 100
+BASE_ROOT_FLAG_POINTS = 200
+
+# Minimum points a flag can be worth (floor)
+MIN_FLAG_POINTS = 10
+
+# Enable dynamic scoring (points decay as more teams capture)
+DYNAMIC_SCORING_ENABLED = True
 
 
 async def submit_flag(
@@ -99,7 +110,9 @@ async def submit_flag(
         await db.commit()
         return SubmissionStatus.DUPLICATE, 0, "Flag already submitted"
     
-    points = ROOT_FLAG_POINTS if flag.flag_type == FlagType.ROOT else USER_FLAG_POINTS
+    # Calculate points dynamically based on number of captures
+    base_points = BASE_ROOT_FLAG_POINTS if flag.flag_type == FlagType.ROOT else BASE_USER_FLAG_POINTS
+    points = await calculate_dynamic_points(db, flag, base_points)
     
     submission = FlagSubmission(
         game_id=game_team.game_id,
@@ -126,6 +139,7 @@ async def update_team_attack_score(
     team_id: str,
     points: int,
 ) -> None:
+    """Add attack points to a team's scoreboard."""
     result = await db.execute(
         select(Scoreboard).where(
             Scoreboard.game_id == game_id,
@@ -137,12 +151,7 @@ async def update_team_attack_score(
     if scoreboard:
         scoreboard.attack_points += points
         scoreboard.flags_captured += 1
-        scoreboard.total_points = (
-            scoreboard.attack_points + 
-            scoreboard.defense_points + 
-            scoreboard.sla_points
-        )
-        scoreboard.last_updated = datetime.utcnow()
+        await scoring_service.recalculate_total_score(scoreboard)
 
 
 async def update_team_defense_score(
@@ -150,6 +159,7 @@ async def update_team_defense_score(
     game_id: uuid.UUID,
     team_id: str,
 ) -> None:
+    """Track that a team lost a flag (for stats)."""
     result = await db.execute(
         select(Scoreboard).where(
             Scoreboard.game_id == game_id,
@@ -160,7 +170,38 @@ async def update_team_defense_score(
     
     if scoreboard:
         scoreboard.flags_lost += 1
-        scoreboard.last_updated = datetime.utcnow()
+        # Note: Defense points are calculated per-tick, not per-capture
+        # This just tracks flags_lost for statistics
+        await scoring_service.recalculate_total_score(scoreboard)
+
+
+async def calculate_dynamic_points(
+    db: AsyncSession,
+    flag: Flag,
+    base_points: int,
+) -> int:
+    """
+    Calculate dynamic points for a flag based on number of captures.
+    
+    Formula: points = max(MIN_FLAG_POINTS, base_points / (1 + stolen_count))
+    
+    This means:
+    - First capture: base_points / 1 = 100%
+    - Second capture: base_points / 2 = 50%
+    - Third capture: base_points / 3 = 33%
+    - etc.
+    
+    The flag's stolen_count is checked BEFORE marking as stolen.
+    """
+    if not DYNAMIC_SCORING_ENABLED:
+        return base_points
+    
+    # stolen_count is the number of times this flag has been captured so far
+    # We add 1 because this is a new capture
+    divisor = flag.stolen_count + 1
+    
+    points = int(base_points / divisor)
+    return max(MIN_FLAG_POINTS, points)
 
 
 async def list_submissions(

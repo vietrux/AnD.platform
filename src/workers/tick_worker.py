@@ -139,6 +139,21 @@ class TickWorker:
         
         await db.commit()
         
+        # Calculate defense points for the PREVIOUS tick (if exists)
+        # Defense is awarded for flags that were NOT stolen during the tick window
+        if tick_number > 1:
+            prev_tick_result = await db.execute(
+                select(Tick).where(
+                    Tick.game_id == game.id,
+                    Tick.tick_number == tick_number - 1,
+                )
+            )
+            prev_tick = prev_tick_result.scalar_one_or_none()
+            if prev_tick:
+                await scoring_service.calculate_defense_points_for_tick(db, game.id, prev_tick)
+                await db.commit()
+        
+        # Update rankings after all scoring
         await scoring_service.update_rankings(db, game.id)
         
         logger.info(f"Game {game.name}: Tick {tick_number} complete, {flags_placed} flags placed")

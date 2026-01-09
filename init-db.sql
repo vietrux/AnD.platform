@@ -4,6 +4,9 @@
 -- This script initializes both GameCoreServer and Wrapper tables
 -- Run this ONCE on a fresh PostgreSQL database
 -- 
+-- Last Updated: 2026-01-09
+-- Includes: Pause tracking, cascade deletes, tick timing
+--
 -- Usage:
 --   docker exec -i andplatform-postgres-1 psql -U postgres -d adg_core < init-db.sql
 -- ==============================================================
@@ -95,14 +98,17 @@ CREATE TABLE IF NOT EXISTS games (
     vulnbox_path            VARCHAR(500),
     checker_module          VARCHAR(200),
     status                  VARCHAR(20) DEFAULT 'draft' NOT NULL,
-    tick_duration_seconds   INTEGER DEFAULT 60,
+    tick_duration_seconds   INTEGER DEFAULT 60 NOT NULL,
     max_ticks               INTEGER,
-    current_tick            INTEGER DEFAULT 0,
+    current_tick            INTEGER DEFAULT 0 NOT NULL,
     start_time              TIMESTAMP,
     end_time                TIMESTAMP,
+    -- Pause tracking for proper tick calculation
     paused_at               TIMESTAMP,
     total_paused_seconds    FLOAT DEFAULT 0.0,
-    created_at              TIMESTAMP DEFAULT NOW()
+    -- Sequential tick progression (tracks when current tick started)
+    current_tick_started_at TIMESTAMP,
+    created_at              TIMESTAMP DEFAULT NOW() NOT NULL
 );
 
 -- Status check constraint
@@ -111,6 +117,9 @@ ALTER TABLE games ADD CONSTRAINT chk_games_status
     CHECK (status IN ('draft', 'deploying', 'running', 'paused', 'finished'));
 
 COMMENT ON TABLE games IS 'Attack-Defense CTF games';
+COMMENT ON COLUMN games.paused_at IS 'Timestamp when game was paused (NULL if not paused)';
+COMMENT ON COLUMN games.total_paused_seconds IS 'Total seconds spent in paused state';
+COMMENT ON COLUMN games.current_tick_started_at IS 'When the current tick started for sequential tick progression';
 
 -- ==============================================================
 -- 6. GAME_TEAMS TABLE (GameCoreServer)
@@ -136,7 +145,7 @@ CREATE INDEX IF NOT EXISTS ix_game_teams_token ON game_teams(token);
 COMMENT ON TABLE game_teams IS 'Teams participating in specific games with container info';
 
 -- ==============================================================
--- 7. GAME_VULNBOXES TABLE (GameCoreServer)
+-- 7. GAME_VULNBOXES TABLE (GameCoreServer - multi-vulnbox support)
 -- ==============================================================
 CREATE TABLE IF NOT EXISTS game_vulnboxes (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -287,6 +296,12 @@ ON CONFLICT (username) DO NOTHING;
 -- ==============================================================
 -- VERIFICATION: Show created tables
 -- ==============================================================
+\echo ''
+\echo '=============================================='
+\echo '  Database Initialization Complete!'
+\echo '=============================================='
+\echo ''
+
 SELECT 
     table_name,
     (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as columns
@@ -294,15 +309,8 @@ FROM information_schema.tables t
 WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
 ORDER BY table_name;
 
--- ==============================================================
--- DONE
--- ==============================================================
 \echo ''
-\echo '=========================================='
-\echo '  Database initialization complete!'
-\echo '=========================================='
-\echo ''
-\echo 'Default admin account created:'
+\echo 'Default admin account:'
 \echo '  Username: admin'
 \echo '  Password: admin123'
 \echo ''

@@ -101,17 +101,38 @@ async def set_game_checker_module(db: AsyncSession, game: Game, module: str) -> 
 
 
 async def add_team_to_game(db: AsyncSession, game_id: uuid.UUID, team_id: str) -> GameTeam:
+    """Add a team to a game. Returns existing entry if team is already in the game."""
+    # Check if team is already in this game
+    existing = await db.execute(
+        select(GameTeam).where(
+            GameTeam.game_id == game_id,
+            GameTeam.team_id == team_id,
+        )
+    )
+    existing_game_team = existing.scalar_one_or_none()
+    if existing_game_team:
+        # Team already in game, return existing entry
+        return existing_game_team
+    
     game_team = GameTeam(
         game_id=game_id,
         team_id=team_id,
     )
     db.add(game_team)
     
-    scoreboard = Scoreboard(
-        game_id=game_id,
-        team_id=team_id,
+    # Check if scoreboard entry exists
+    existing_scoreboard = await db.execute(
+        select(Scoreboard).where(
+            Scoreboard.game_id == game_id,
+            Scoreboard.team_id == team_id,
+        )
     )
-    db.add(scoreboard)
+    if not existing_scoreboard.scalar_one_or_none():
+        scoreboard = Scoreboard(
+            game_id=game_id,
+            team_id=team_id,
+        )
+        db.add(scoreboard)
     
     await db.commit()
     await db.refresh(game_team)

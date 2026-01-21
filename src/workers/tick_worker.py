@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from src.core.database import async_session_maker, wait_for_db
 from src.core.config import get_settings
+from src.core.events import tick_timer_manager, connection_manager
 from src.models import Game, GameStatus, Tick, TickStatus, FlagType, GameTeam
 from src.services import game_service, flag_service, docker_service, scoring_service
 
@@ -155,6 +156,27 @@ class TickWorker:
         
         # Update rankings after all scoring
         await scoring_service.update_rankings(db, game.id)
+        
+        # Broadcast tick change to WebSocket clients
+        game_id_str = str(game.id)
+        await tick_timer_manager.update_tick(
+            game_id=game_id_str,
+            current_tick=tick_number,
+            tick_started_at=game.current_tick_started_at,
+        )
+        
+        # Also broadcast explicit tick_change event
+        await connection_manager.broadcast_to_game(
+            game_id_str,
+            {
+                "type": "tick_change",
+                "game_id": game_id_str,
+                "old_tick": tick_number - 1 if tick_number > 1 else 0,
+                "new_tick": tick_number,
+                "tick_duration_seconds": game.tick_duration_seconds,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+            }
+        )
         
         logger.info(f"Game {game.name}: Tick {tick_number} complete, {flags_placed} flags placed")
         

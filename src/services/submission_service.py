@@ -35,6 +35,9 @@ async def submit_flag(
     team_id: str,
     submitted_flag: str,
 ) -> tuple[SubmissionStatus, int, str]:
+    # Trim whitespace from submitted flag
+    submitted_flag = submitted_flag.strip()
+    
     game_team = await db.execute(
         select(GameTeam).where(
             GameTeam.game_id == game_id,
@@ -128,6 +131,9 @@ async def submit_flag(
     
     await update_team_attack_score(db, game_team.game_id, game_team.team_id, points)
     await update_team_defense_score(db, flag.game_id, flag.team_id)
+    
+    # Update rankings immediately so they reflect in real-time
+    await scoring_service.update_rankings(db, game_team.game_id)
     
     await db.commit()
     return SubmissionStatus.ACCEPTED, points, f"Flag accepted! +{points} points"

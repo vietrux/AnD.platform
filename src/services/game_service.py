@@ -50,9 +50,14 @@ async def update_game_status(db: AsyncSession, game: Game, status: GameStatus) -
     
     When resuming from pause, adjusts current_tick_started_at to maintain
     proper tick timing (ticks continue from where they left off).
+    
+    Also broadcasts status changes to WebSocket clients.
     """
     from datetime import timedelta
+    from src.core.events import tick_timer_manager, connection_manager
+    
     now = datetime.utcnow()
+    game_id_str = str(game.id)
     
     if status == GameStatus.RUNNING:
         if game.start_time is None:
@@ -70,19 +75,50 @@ async def update_game_status(db: AsyncSession, game: Game, status: GameStatus) -
                 game.current_tick_started_at = game.current_tick_started_at + timedelta(seconds=paused_duration)
             
             game.paused_at = None
+        
+        # Register/update tick timer for running game
+        tick_started = game.current_tick_started_at or now
+        await tick_timer_manager.register_game(
+            game_id=game_id_str,
+            current_tick=game.current_tick,
+            tick_duration_seconds=game.tick_duration_seconds,
+            tick_started_at=tick_started,
+            game_status="running",
+        )
             
     elif status == GameStatus.PAUSED:
         # Record when game was paused
         game.paused_at = now
+        # Update tick timer status
+        await tick_timer_manager.update_status(game_id_str, "paused")
         
     elif status == GameStatus.FINISHED:
         game.end_time = now
         # Clear pause tracking
         game.paused_at = None
+        # Stop tick timer broadcasts
+        await tick_timer_manager.unregister_game(game_id_str)
+    
+    elif status == GameStatus.DRAFT:
+        # Game reset - stop tick timer
+        await tick_timer_manager.unregister_game(game_id_str)
     
     game.status = status
     await db.commit()
     await db.refresh(game)
+    
+    # Broadcast game state change to WebSocket clients
+    await connection_manager.broadcast_to_game(
+        game_id_str,
+        {
+            "type": "game_state",
+            "game_id": game_id_str,
+            "status": status.value,
+            "current_tick": game.current_tick,
+            "timestamp": now.isoformat() + "Z",
+        }
+    )
+    
     return game
 
 

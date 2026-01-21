@@ -6,6 +6,7 @@ from src.api.routes.flags import router as flags_router
 from src.api.routes.ticks import router as ticks_router
 from src.api.routes.vulnboxes import router as vulnboxes_router
 from src.api.routes.checkers import router as checkers_router
+from src.api.routes.websocket import router as websocket_router
 
 __all__ = [
     "games_router",
@@ -16,5 +17,6 @@ __all__ = [
     "ticks_router",
     "vulnboxes_router",
     "checkers_router",
+    "websocket_router",
 ]
 

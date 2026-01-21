@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from src.core.database import engine, Base
+from src.core.events import init_event_listener, shutdown_event_listener
 from src.api.routes import (
     games_router,
     checker_router,
@@ -12,14 +13,23 @@ from src.api.routes import (
     ticks_router,
     vulnboxes_router,
     checkers_router,
+    websocket_router,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Initialize PostgreSQL event listener for WebSocket broadcasts
+    await init_event_listener()
+    
     yield
+    
+    # Shutdown
+    await shutdown_event_listener()
 
 
 def create_app() -> FastAPI:
@@ -47,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(ticks_router)
     app.include_router(vulnboxes_router)
     app.include_router(checkers_router)
+    app.include_router(websocket_router)
     
     @app.get("/health")
     async def health_check():

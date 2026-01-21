@@ -88,7 +88,15 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${POSTGRES_CONTAINER}$"; then
     
     if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
         cd "$SCRIPT_DIR"
-        docker-compose up -d postgres
+        
+        # Detect docker-compose or docker compose
+        if command -v docker-compose &> /dev/null; then
+            DOCKER_COMPOSE_CMD="docker-compose"
+        else
+            DOCKER_COMPOSE_CMD="docker compose"
+        fi
+        
+        $DOCKER_COMPOSE_CMD up -d postgres
         echo "  Waiting for container to start..."
         sleep 3
     else

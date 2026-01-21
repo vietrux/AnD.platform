@@ -96,10 +96,11 @@ async def deploy_team_container(
         
         container.reload()
         networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
-        ip_address = "unknown"
-        for network_info in networks.values():
-            ip_address = network_info.get("IPAddress", "unknown")
-            break
+        # ip_address = "unknown"
+        ip_address = "192.168.100.94"
+        # for network_info in networks.values():
+        #     ip_address = network_info.get("IPAddress", "unknown")
+        #     break
         
         return container_name, ip_address
     

@@ -77,6 +77,7 @@ class GameTeam(Base):
     ssh_username: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ssh_password: Mapped[str | None] = mapped_column(String(100), nullable=True)
     ssh_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    http_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
     
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

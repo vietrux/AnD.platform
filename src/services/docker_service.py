@@ -69,25 +69,30 @@ async def deploy_team_container(
     ssh_port: int,
     ssh_username: str,
     ssh_password: str,
+    http_port: int | None = None,
 ) -> tuple[str, str]:
     container_name = f"adg-{game_id}-{team_id}"
-    
+
     def _deploy():
         client = get_docker_client()
-        
+
         try:
             existing = client.containers.get(container_name)
             existing.remove(force=True)
         except docker.errors.NotFound:
             pass
-        
+
+        port_bindings = {"22/tcp": ssh_port}
+        if http_port is not None:
+            port_bindings["80/tcp"] = http_port
+
         container = client.containers.run(
             image_tag,
             name=container_name,
             detach=True,
             network_mode="bridge",
             auto_remove=False,
-            ports={"22/tcp": ssh_port},
+            ports=port_bindings,
             environment={
                 "SSH_USERNAME": ssh_username,
                 "SSH_PASSWORD": ssh_password,

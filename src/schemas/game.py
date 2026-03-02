@@ -56,6 +56,7 @@ class GameTeamResponse(BaseModel):
     ssh_username: str | None
     ssh_password: str | None
     ssh_port: int | None
+    http_port: int | None
     is_active: bool
     created_at: datetime
 

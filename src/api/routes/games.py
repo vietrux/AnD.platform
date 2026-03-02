@@ -172,11 +172,13 @@ async def start_game(
     
     for idx, team in enumerate(teams):
         ssh_port = await port_service.get_port_for_team(db, game_id, idx)
+        http_port = await port_service.get_http_port_for_team(db, game_id, idx)
         ssh_username, ssh_password = docker_service.generate_ssh_credentials()
-        
+
         try:
             container_name, container_ip = await docker_service.deploy_team_container(
-                game_id, team.team_id, image_tag, ssh_port, ssh_username, ssh_password
+                game_id, team.team_id, image_tag, ssh_port, ssh_username, ssh_password,
+                http_port=http_port,
             )
         except Exception as e:
             # Cleanup already deployed containers
@@ -190,16 +192,18 @@ async def start_game(
                 status_code=500,
                 detail=f"Failed to deploy container for team {team.team_id}: {str(e)}"
             )
-        
+
         await game_service.update_game_team_container(
-            db, team, container_name, container_ip, ssh_username, ssh_password, ssh_port
+            db, team, container_name, container_ip, ssh_username, ssh_password, ssh_port,
+            http_port=http_port,
         )
-        
+
         team_credentials.append({
             "team_id": team.team_id,
             "container_ip": container_ip,
             "ssh_host": settings.ssh_host,
             "ssh_port": ssh_port,
+            "http_port": http_port,
             "ssh_username": ssh_username,
             "ssh_password": ssh_password,
         })

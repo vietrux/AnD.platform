@@ -200,19 +200,21 @@ async def get_game_teams(db: AsyncSession, game_id: uuid.UUID) -> list[GameTeam]
 
 
 async def update_game_team_container(
-    db: AsyncSession, 
-    game_team: GameTeam, 
-    container_name: str, 
+    db: AsyncSession,
+    game_team: GameTeam,
+    container_name: str,
     container_ip: str,
     ssh_username: str | None = None,
     ssh_password: str | None = None,
     ssh_port: int | None = None,
+    http_port: int | None = None,
 ) -> GameTeam:
     game_team.container_name = container_name
     game_team.container_ip = container_ip
     game_team.ssh_username = ssh_username
     game_team.ssh_password = ssh_password
     game_team.ssh_port = ssh_port
+    game_team.http_port = http_port
     await db.commit()
     await db.refresh(game_team)
     return game_team

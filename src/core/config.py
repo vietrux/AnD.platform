@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     
     ssh_port_base: int = 22000
+    http_port_base: int = 8000
     ssh_host: str = "0.0.0.0"
 
     class Config:

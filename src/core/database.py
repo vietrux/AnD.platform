@@ -55,6 +55,9 @@ def _apply_schema_migrations(connection) -> None:
         if "token" in game_teams_columns and not game_teams_columns["token"]["nullable"]:
             connection.execute(text("ALTER TABLE game_teams ALTER COLUMN token DROP NOT NULL"))
             logger.info("Made token column nullable in game_teams table")
+        if "http_port" not in game_teams_columns:
+            connection.execute(text("ALTER TABLE game_teams ADD COLUMN http_port INTEGER DEFAULT NULL"))
+            logger.info("Added http_port column to game_teams table")
 
 
 async def wait_for_db(timeout: float = 60.0) -> bool:

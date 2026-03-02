@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from src.core.database import engine, Base
+from src.core.database import engine, Base, _apply_schema_migrations
 from src.core.events import init_event_listener, shutdown_event_listener
 from src.api.routes import (
     games_router,
@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     # Startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_apply_schema_migrations)
     
     # Initialize PostgreSQL event listener for WebSocket broadcasts
     await init_event_listener()
